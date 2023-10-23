@@ -30,14 +30,14 @@ interface Options {
   dir: string;
 }
 
-export function generateNetworkJson({ output, dir }: Options) {
+export function generateNetworkJson({output, dir}: Options) {
   // Modify this path
   const inputDir = path.join(dir, 'broadcast', '**/*.json');
 
-  const files = glob.sync(inputDir).filter((file) => file.endsWith('.json'));
+  const files = glob.sync(inputDir).filter(file => file.endsWith('.json'));
 
   const network: NetworkConfig = {};
-  files.forEach((file) => {
+  files.forEach(file => {
     const content = fs.readFileSync(file, 'utf8');
     const data: Data = JSON.parse(content);
 
@@ -46,9 +46,9 @@ export function generateNetworkJson({ output, dir }: Options) {
     network[networkId] = network[networkId] || {};
 
     const receipt = (hash: string): Receipt | undefined =>
-      data.receipts.find((receipt) => receipt.transactionHash === hash);
+      data.receipts.find(receipt => receipt.transactionHash === hash);
 
-    data.transactions.forEach((tx) => {
+    data.transactions.forEach(tx => {
       if (tx.contractName && tx.contractAddress) {
         const r = receipt(tx.hash);
         network[networkId][tx.contractName] = {

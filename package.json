@@ -26,5 +26,8 @@
     "prepare": "yarn run compile",
     "pretest": "yarn run compile",
     "posttest": "yarn run lint"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

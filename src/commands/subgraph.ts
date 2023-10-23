@@ -1,6 +1,7 @@
 import {generateNetworkJson} from '../scripts/generate-network-json';
+import {CommandModule} from 'yargs';
 
-export const subgraphCommand = {
+export const subgraphCommand: CommandModule = {
   command: 'subgraph',
   describe: 'Generates a network.json based on the forge deployment scripts',
   builder: {
