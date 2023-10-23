@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as glob from 'glob';
+import * as net from 'net';
 
 interface Transaction {
   contractName?: string;
@@ -31,7 +32,7 @@ interface Options {
   dir: string;
 }
 
-const contractTimestamps: Record<string, [number, number]> = {};
+const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
 
 export function generateNetworkJson({output, dir}: Options) {
   // Modify this path
@@ -47,6 +48,7 @@ export function generateNetworkJson({output, dir}: Options) {
     const pieces = file.split('/');
     const networkId = pieces[pieces.length - 2];
     network[networkId] = network[networkId] || {};
+    contractTimestamps[networkId] = contractTimestamps[networkId] || {};
 
     const receipt = (hash: string): Receipt | undefined =>
       data.receipts.find(receipt => receipt.transactionHash === hash);
@@ -56,13 +58,14 @@ export function generateNetworkJson({output, dir}: Options) {
         const r = receipt(tx.hash);
         const currentBlockNumber =
           +BigInt(r?.blockNumber || '0').toString() ||
-          contractTimestamps[tx.contractName][1] ||
+          contractTimestamps[networkId][tx.contractName]?.[1] ||
           0;
 
-        const prevTimestamp = contractTimestamps[tx.contractName]?.[0];
+        const prevTimestamp =
+          contractTimestamps[networkId][tx.contractName]?.[0] || 0;
 
         if (prevTimestamp < data.timestamp) {
-          contractTimestamps[tx.contractName] = [
+          contractTimestamps[networkId][tx.contractName] = [
             data.timestamp,
             currentBlockNumber,
           ];
