@@ -20,7 +20,7 @@ interface Data {
 
 interface ContractDeployment {
   address: string;
-  startBlock: string;
+  startBlock: number;
 }
 
 type NetworkConfig = Record<string, Record<string, ContractDeployment>>;
@@ -51,9 +51,16 @@ export function generateNetworkJson({output, dir}: Options) {
     data.transactions.forEach(tx => {
       if (tx.contractName && tx.contractAddress) {
         const r = receipt(tx.hash);
+        const currentBlockNumber = +BigInt(r?.blockNumber || '0').toString();
+        const prevValue = network[networkId][tx.contractName];
+
+        if (prevValue?.startBlock > currentBlockNumber) {
+          return;
+        }
+
         network[networkId][tx.contractName] = {
           address: tx.contractAddress,
-          startBlock: BigInt(r?.blockNumber || '0').toString(),
+          startBlock: currentBlockNumber,
         };
       }
     });
