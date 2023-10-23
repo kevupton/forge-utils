@@ -1,4 +1,6 @@
-exports = {
+import {generateNetworkJson} from '../scripts/generate-network-json';
+
+export const subgraphCommand = {
   command: 'subgraph',
   describe: 'Generates a network.json based on the forge deployment scripts',
   builder: {
@@ -13,7 +15,7 @@ exports = {
       default: process.cwd(),
     },
   },
-  handler: (argv) => {
-    require('../scripts/generate-network-json')(argv);
+  handler: (argv: any) => {
+    generateNetworkJson(argv);
   },
 };

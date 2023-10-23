@@ -30,7 +30,7 @@ interface Options {
   dir: string;
 }
 
-module.exports = ({ output, dir }: Options): void => {
+export function generateNetworkJson({ output, dir }: Options) {
   // Modify this path
   const inputDir = path.join(dir, 'broadcast', '**/*.json');
 
@@ -63,4 +63,4 @@ module.exports = ({ output, dir }: Options): void => {
     path.join(output, 'network.json'),
     JSON.stringify(network, null, 2)
   );
-};
+}
