@@ -1,4 +1,4 @@
-import {generateNetworkJson} from '../scripts/generate-network-json';
+import {generateNetworksJson} from '../scripts/generate-networks-json';
 import {CommandModule} from 'yargs';
 
 export const subgraphCommand: CommandModule = {
@@ -11,12 +11,12 @@ export const subgraphCommand: CommandModule = {
       default: process.cwd(),
     },
     output: {
-      describe: 'Where to output the network.json to',
+      describe: 'Where to output the networks.json to',
       type: 'string',
       default: process.cwd(),
     },
   },
   handler: (argv: any) => {
-    generateNetworkJson(argv);
+    generateNetworksJson(argv);
   },
 };

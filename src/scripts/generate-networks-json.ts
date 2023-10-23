@@ -33,7 +33,7 @@ interface Options {
 
 const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
 
-export function generateNetworkJson({output, dir}: Options) {
+export function generateNetworksJson({output, dir}: Options) {
   // Modify this path
   const inputDir = path.join(dir, 'broadcast', '**/*.json');
 
@@ -80,7 +80,7 @@ export function generateNetworkJson({output, dir}: Options) {
   });
 
   fs.writeFileSync(
-    path.join(output, 'network.json'),
+    path.join(output, 'networks.json'),
     JSON.stringify(network, null, 2)
   );
 }
