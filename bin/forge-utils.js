@@ -1,3 +1,5 @@
 #!/usr/bin/env node
 
-require('../build/index.js');
+const path = require('path');
+
+require(path.join(__dirname, '../build/index.js'));
