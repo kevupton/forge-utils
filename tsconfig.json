@@ -5,7 +5,8 @@
     "outDir": "build",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "declaration": false
+    "declaration": false,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*.ts",
