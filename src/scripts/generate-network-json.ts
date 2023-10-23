@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import glob from 'glob';
+import {sync} from 'glob';
 
 interface Transaction {
   contractName?: string;
@@ -37,7 +37,7 @@ export function generateNetworkJson({output, dir}: Options) {
   // Modify this path
   const inputDir = path.join(dir, 'broadcast', '**/*.json');
 
-  const files = glob.sync(inputDir).filter(file => file.endsWith('.json'));
+  const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
   const network: NetworkConfig = {};
   files.forEach(file => {
