@@ -46,8 +46,8 @@ export function generateNetworkJson({output, dir}: Options) {
 
     const pieces = file.split('/');
     const networkId = pieces[pieces.length - 2];
-    network[networkId] = network[networkId] || {};
     const networkName = subgraphData[networkId];
+    network[networkName] = network[networkName] || {};
     contractTimestamps[networkId] = contractTimestamps[networkId] || {};
 
     const receipt = (hash: string): Receipt | undefined =>
