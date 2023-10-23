@@ -59,7 +59,9 @@ export function generateNetworkJson({output, dir}: Options) {
           contractTimestamps[tx.contractName][1] ||
           0;
 
-        if (contractTimestamps[tx.contractName][0] < data.timestamp) {
+        const prevTimestamp = contractTimestamps[tx.contractName]?.[0];
+
+        if (prevTimestamp < data.timestamp) {
           contractTimestamps[tx.contractName] = [
             data.timestamp,
             currentBlockNumber,
