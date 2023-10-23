@@ -16,6 +16,7 @@ interface Receipt {
 interface Data {
   transactions: Transaction[];
   receipts: Receipt[];
+  timestamp: number;
 }
 
 interface ContractDeployment {
@@ -29,6 +30,8 @@ interface Options {
   output: string;
   dir: string;
 }
+
+const contractTimestamps: Record<string, [number, number]> = {};
 
 export function generateNetworkJson({output, dir}: Options) {
   // Modify this path
@@ -51,17 +54,22 @@ export function generateNetworkJson({output, dir}: Options) {
     data.transactions.forEach(tx => {
       if (tx.contractName && tx.contractAddress) {
         const r = receipt(tx.hash);
-        const currentBlockNumber = +BigInt(r?.blockNumber || '0').toString();
-        const prevValue = network[networkId][tx.contractName];
+        const currentBlockNumber =
+          +BigInt(r?.blockNumber || '0').toString() ||
+          contractTimestamps[tx.contractName][1] ||
+          0;
 
-        if (prevValue?.startBlock > currentBlockNumber) {
-          return;
+        if (contractTimestamps[tx.contractName][0] < data.timestamp) {
+          contractTimestamps[tx.contractName] = [
+            data.timestamp,
+            currentBlockNumber,
+          ];
+
+          network[networkId][tx.contractName] = {
+            address: tx.contractAddress,
+            startBlock: currentBlockNumber,
+          };
         }
-
-        network[networkId][tx.contractName] = {
-          address: tx.contractAddress,
-          startBlock: currentBlockNumber,
-        };
       }
     });
   });
