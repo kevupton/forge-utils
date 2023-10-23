@@ -20,7 +20,7 @@
   },
   "scripts": {
     "lint": "gts lint",
-    "clean": "gts clean",
+    "clean": "rm -rf build",
     "compile": "tsc",
     "fix": "gts fix",
     "prepare": "yarn clean && yarn run compile",
