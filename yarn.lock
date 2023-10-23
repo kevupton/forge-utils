@@ -850,14 +850,6 @@ foreground-child@^3.1.0:
     cross-spawn "^7.0.0"
     signal-exit "^4.0.1"
 
-forge-utils@^0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/forge-utils/-/forge-utils-0.0.1.tgz#a73aaec75c7f881a78d23bc195c5561846646eff"
-  integrity sha512-5vlZvUHvFkO3KWpYxLvxcakjuRaQ4PuRi4oU/zE75YrhqxGjRl2YBNSyR6ZpwrVr/8Jsg0GfFknDyioCfsDYJA==
-  dependencies:
-    glob "^10.3.10"
-    yargs "^17.7.2"
-
 fs.realpath@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
