@@ -2,11 +2,11 @@
   "name": "forge-utils",
   "version": "0.0.1",
   "description": "Utility scripts for working with a foundry project",
-  "main": "src/index.ts",
+  "main": "build/index.js",
   "author": "Kevin Upton <kevin@kei.fi>",
   "license": "MIT",
   "bin": {
-    "forge-utils": "src/index.ts"
+    "forge-utils": "bin/forge-utils.js"
   },
   "dependencies": {
     "glob": "^10.3.10",
@@ -23,7 +23,7 @@
     "clean": "gts clean",
     "compile": "tsc",
     "fix": "gts fix",
-    "prepare": "yarn run compile",
+    "prepare": "yarn clean && yarn run compile",
     "pretest": "yarn run compile",
     "posttest": "yarn run lint"
   },
