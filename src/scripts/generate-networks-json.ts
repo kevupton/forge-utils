@@ -80,7 +80,9 @@ export function generateNetworksJson({output, dir}: Options) {
   });
 
   fs.writeFileSync(
-    path.join(output, 'networks.json'),
+    fs.existsSync(output) && fs.statSync(output).isDirectory()
+      ? path.join(output, 'networks.json')
+      : output,
     JSON.stringify(network, null, 2)
   );
 }

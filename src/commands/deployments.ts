@@ -1,9 +1,10 @@
-import {generateNetworksJson} from '../scripts/generate-networks-json';
 import {CommandModule} from 'yargs';
+import {generateDeploymentsJson} from '../scripts/generate-deployments-json';
 
-export const subgraphCommand: CommandModule = {
-  command: 'subgraph',
-  describe: 'Generates a networks.json based on the forge deployment scripts',
+export const deploymentsCommand: CommandModule = {
+  command: 'deployments',
+  describe:
+    'Generates a deployments.json based on the forge deployment scripts',
   builder: {
     dir: {
       describe: 'Directory of forge build',
@@ -17,6 +18,6 @@ export const subgraphCommand: CommandModule = {
     },
   },
   handler: (argv: any) => {
-    generateNetworksJson(argv);
+    generateDeploymentsJson(argv);
   },
 };
