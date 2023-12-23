@@ -28,14 +28,27 @@ type NetworkConfig = Record<string, Record<string, ContractDeployment>>;
 
 interface Options {
   output: string;
-  dir: string;
+  package: string;
 }
 
 const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
 
-export function generateNetworksJson({output, dir}: Options) {
+export function generateNetworksJson({output, package: packageDir}: Options) {
   // Modify this path
-  const inputDir = path.join(dir, 'broadcast', '**/*.json');
+  let inputDir: string;
+
+  try {
+    inputDir = require.resolve(packageDir);
+  } catch (e) {
+    inputDir = path.join(process.cwd(), packageDir);
+    if (!fs.existsSync(inputDir)) {
+      console.error('Cannot find path ' + inputDir);
+      // eslint-disable-next-line no-process-exit
+      process.exit(1);
+    }
+  }
+
+  inputDir = path.join(inputDir, 'broadcast', '**/*.json');
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
@@ -64,7 +77,11 @@ export function generateNetworksJson({output, dir}: Options) {
         const prevTimestamp =
           contractTimestamps[networkId][tx.contractName]?.[0] || 0;
 
-        if (prevTimestamp < data.timestamp) {
+        if (
+          currentBlockNumber &&
+          (prevTimestamp < data.timestamp ||
+            !network[networkName]?.[tx.contractName]?.startBlock)
+        ) {
           contractTimestamps[networkId][tx.contractName] = [
             data.timestamp,
             currentBlockNumber,
