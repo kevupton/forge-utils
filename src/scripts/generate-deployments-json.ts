@@ -45,7 +45,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
     contractTimestamps[chainId] = contractTimestamps[chainId] || {};
 
     data.transactions.forEach(tx => {
-      if (tx.contractName && tx.contractAddress) {
+      if (tx.contractName && tx.contractAddress && tx.hash) {
         const prevTimestamp = contractTimestamps[chainId][tx.contractName] || 0;
 
         if (prevTimestamp < data.timestamp) {
