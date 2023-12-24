@@ -15,6 +15,11 @@ export const subgraphCommand: CommandModule = {
         describe: 'Where to output the networks.json to',
         type: 'string',
         default: process.cwd(),
+      })
+      .option('dir', {
+        describe: 'The folder where the broadcast directory is located',
+        type: 'string',
+        default: 'broadcast',
       });
   },
   handler: (argv: any) => {

@@ -29,26 +29,28 @@ type NetworkConfig = Record<string, Record<string, ContractDeployment>>;
 interface Options {
   output: string;
   package: string;
+  dir: string;
 }
 
 const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
 
-export function generateNetworksJson({output, package: packageDir}: Options) {
+export function generateNetworksJson({
+  output,
+  package: packageDir,
+  dir,
+}: Options) {
   // Modify this path
-  let inputDir: string;
-
-  try {
-    inputDir = require.resolve(packageDir);
-  } catch (e) {
-    inputDir = path.join(process.cwd(), packageDir);
-    if (!fs.existsSync(inputDir)) {
-      console.error('Cannot find path ' + inputDir);
-      // eslint-disable-next-line no-process-exit
-      process.exit(1);
-    }
+  let inputDir = path.join(process.cwd(), 'node_modules', packageDir, dir);
+  if (!fs.existsSync(inputDir)) {
+    inputDir = path.join(process.cwd(), packageDir, dir);
+  }
+  if (!fs.existsSync(inputDir)) {
+    console.error('Cannot find path ' + inputDir);
+    // eslint-disable-next-line no-process-exit
+    process.exit(1);
   }
 
-  inputDir = path.join(inputDir, 'broadcast', '**/*.json');
+  inputDir = path.join(inputDir, '**/*.json');
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
