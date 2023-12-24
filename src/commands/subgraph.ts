@@ -2,7 +2,7 @@ import {generateNetworksJson} from '../scripts/generate-networks-json';
 import {CommandModule} from 'yargs';
 
 export const subgraphCommand: CommandModule = {
-  command: 'subgraph',
+  command: 'subgraph <package>',
   describe: 'Generates a networks.json based on the forge deployment scripts',
   builder: yargs => {
     return yargs
