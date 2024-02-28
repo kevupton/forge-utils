@@ -34,7 +34,22 @@ export function generateDeploymentsJson({output, dir}: Options) {
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
-  const config: DeploymentConfig = {};
+  const deploymentsPath =
+    fs.existsSync(output) && fs.statSync(output).isDirectory()
+      ? path.join(output, 'deployments.json')
+      : output;
+
+  const loadConfig = (): DeploymentConfig => {
+    try {
+      return fs.existsSync(deploymentsPath)
+        ? JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'))
+        : {};
+    } catch (e) {
+      return {};
+    }
+  };
+
+  const config: DeploymentConfig = loadConfig();
   files.forEach(file => {
     const content = fs.readFileSync(file, 'utf8');
     const data: Data = JSON.parse(content);
@@ -57,10 +72,5 @@ export function generateDeploymentsJson({output, dir}: Options) {
     });
   });
 
-  fs.writeFileSync(
-    fs.existsSync(output) && fs.statSync(output).isDirectory()
-      ? path.join(output, 'deployments.json')
-      : output,
-    JSON.stringify(config, null, 2)
-  );
+  fs.writeFileSync(deploymentsPath, JSON.stringify(config, null, 2));
 }
