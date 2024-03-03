@@ -143,5 +143,6 @@ const subgraphData: Record<string, string> = {
   1101: 'polygon-zkevm',
   324: 'zksync-era',
   1115011: 'sapolio',
+  11155111: 'sepolia',
   1442: 'polygon-zkevm-testnet',
 };
