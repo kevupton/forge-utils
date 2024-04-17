@@ -42,7 +42,6 @@ function cleanFile(filePath: string): void {
         console.error(`Error writing file: ${filePath}`, err);
         return;
       }
-      console.log(`File updated: ${filePath}`);
     });
   });
 }
