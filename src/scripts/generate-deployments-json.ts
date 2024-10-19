@@ -6,6 +6,9 @@ interface Transaction {
   contractName?: string;
   contractAddress?: string;
   hash: string;
+  function?: string;
+  arguments?: string[];
+  transactionType?: string;
 }
 
 interface Receipt {
@@ -17,9 +20,12 @@ interface Data {
   transactions: Transaction[];
   receipts: Receipt[];
   timestamp: number;
+  meta?: {
+    env?: string;
+  };
 }
 
-type DeploymentConfig = Record<string, Record<string, string>>;
+type DeploymentConfig = Record<string, Record<string, Record<string, string>>>;
 
 interface Options {
   output: string;
@@ -27,9 +33,9 @@ interface Options {
 }
 
 const contractTimestamps: Record<string, Record<string, number>> = {};
+const contractNames: Record<string, Record<string, string>> = {};
 
 export function generateDeploymentsJson({output, dir}: Options) {
-  // Modify this path
   const inputDir = path.join(dir, 'broadcast', '**/*.json');
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
@@ -56,8 +62,30 @@ export function generateDeploymentsJson({output, dir}: Options) {
 
     const pieces = file.split('/');
     const chainId = pieces[pieces.length - 2];
-    config[chainId] = config[chainId] || {};
+    const env = data.meta?.env || 'default';
+
+    config[env] = config[env] || {};
+    config[env][chainId] = config[env][chainId] || {};
     contractTimestamps[chainId] = contractTimestamps[chainId] || {};
+    contractNames[chainId] = contractNames[chainId] || {};
+
+    // If there's no existing contractNames for this chainId, initialize it from the loaded config
+    if (Object.keys(contractNames[chainId]).length === 0) {
+      Object.entries(config[env][chainId]).forEach(([key, value]) => {
+        const address = config[env][chainId][key];
+        if (address) {
+          contractNames[chainId][address.toLowerCase()] = value;
+        }
+      });
+    }
+
+    // First pass: save all implementation names by their contract address
+    data.transactions.forEach(tx => {
+      if (tx.contractName && tx.contractAddress) {
+        contractNames[chainId][tx.contractAddress.toLowerCase()] =
+          tx.contractName;
+      }
+    });
 
     data.transactions.forEach(tx => {
       if (tx.contractName && tx.contractAddress && tx.hash) {
@@ -66,7 +94,34 @@ export function generateDeploymentsJson({output, dir}: Options) {
         if (prevTimestamp < data.timestamp) {
           contractTimestamps[chainId][tx.contractName] = data.timestamp;
 
-          config[chainId][tx.contractName] = tx.contractAddress;
+          if (tx.contractName === 'TransparentUpgradeableProxy') {
+            // Find the implementation contract based on the upgradeAndCall transaction
+            const upgradeAndCallTx = data.transactions.find(
+              t =>
+                t.transactionType === 'CALL' &&
+                t.function === 'upgradeAndCall(address,address,bytes)' &&
+                t.arguments &&
+                t.arguments.length > 2 &&
+                t.arguments[0] === tx.contractAddress
+            );
+            if (upgradeAndCallTx && upgradeAndCallTx.arguments) {
+              const proxyAddress = upgradeAndCallTx.arguments[0];
+              const implementationAddress = upgradeAndCallTx.arguments[1];
+              const implementationName =
+                contractNames[chainId][implementationAddress.toLowerCase()];
+              if (implementationName) {
+                const baseName = implementationName.replace(
+                  'Implementation',
+                  ''
+                );
+                config[env][chainId][baseName] = proxyAddress;
+                config[env][chainId][`${baseName}Implementation`] =
+                  implementationAddress;
+              }
+            }
+          } else {
+            config[env][chainId][tx.contractName] = tx.contractAddress;
+          }
         }
       }
     });

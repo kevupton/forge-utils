@@ -2,34 +2,33 @@ import fs from 'fs';
 import path from 'path';
 
 export function removeBytecode(directoryPath: string): void {
-  fs.readdir(directoryPath, {withFileTypes: true}, (err, files) => {
-    if (err) {
-      console.error(`Error reading directory: ${directoryPath}`, err);
-      return;
-    }
+  try {
+    const files = fs.readdirSync(directoryPath, {withFileTypes: true});
 
-    files.forEach(file => {
-      if (file.isFile()) {
-        if (file.name.endsWith('.js') || file.name.endsWith('.ts')) {
-          cleanFile(path.join(file.path, file.name));
-        }
+    for (const file of files) {
+      const filePath = path.join(directoryPath, file.name);
+
+      if (
+        file.isFile() &&
+        (file.name.endsWith('.js') || file.name.endsWith('.ts'))
+      ) {
+        cleanFile(filePath);
       } else if (
         file.isDirectory() &&
         file.name !== '.' &&
         file.name !== '..'
       ) {
-        removeBytecode(path.join(file.path, file.name));
+        removeBytecode(filePath);
       }
-    });
-  });
+    }
+  } catch (err) {
+    console.error(`Error processing directory: ${directoryPath}`, err);
+  }
 }
 
 function cleanFile(filePath: string): void {
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error(`Error reading file: ${filePath}`, err);
-      return;
-    }
+  try {
+    const data = fs.readFileSync(filePath, 'utf8');
 
     // Replace all string constants in double quotes
     const updatedContent = data.replace(
@@ -37,11 +36,9 @@ function cleanFile(filePath: string): void {
       'const _bytecode = "0x";'
     );
 
-    fs.writeFile(filePath, updatedContent, 'utf8', err => {
-      if (err) {
-        console.error(`Error writing file: ${filePath}`, err);
-        return;
-      }
-    });
-  });
+    fs.writeFileSync(filePath, updatedContent, 'utf8');
+    console.log(`Successfully cleaned file: ${filePath}`);
+  } catch (err) {
+    console.error(`Error processing file: ${filePath}`, err);
+  }
 }

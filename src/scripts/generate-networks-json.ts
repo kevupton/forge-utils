@@ -6,6 +6,9 @@ interface Transaction {
   contractName?: string;
   contractAddress?: string;
   hash: string;
+  function?: string;
+  arguments?: string[];
+  transactionType?: string;
 }
 
 interface Receipt {
@@ -17,6 +20,9 @@ interface Data {
   transactions: Transaction[];
   receipts: Receipt[];
   timestamp: number;
+  meta?: {
+    env?: string;
+  };
 }
 
 interface ContractDeployment {
@@ -30,14 +36,17 @@ interface Options {
   output: string;
   package: string;
   dir: string;
+  env?: string;
 }
 
 const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
+const contractNames: Record<string, Record<string, string>> = {};
 
 export function generateNetworksJson({
   output,
   package: packageDir,
   dir,
+  env = 'default',
 }: Options) {
   // Modify this path
   let inputDir = path.join(process.cwd(), 'node_modules', packageDir, dir);
@@ -59,14 +68,27 @@ export function generateNetworksJson({
     const content = fs.readFileSync(file, 'utf8');
     const data: Data = JSON.parse(content);
 
+    // Skip files that don't match the specified environment
+    if ((data.meta?.env ?? 'default') !== env) {
+      return;
+    }
+
     const pieces = file.split('/');
     const networkId = pieces[pieces.length - 2];
     const networkName = subgraphData[networkId];
     network[networkName] = network[networkName] || {};
     contractTimestamps[networkId] = contractTimestamps[networkId] || {};
+    contractNames[networkId] = contractNames[networkId] || {};
 
     const receipt = (hash: string): Receipt | undefined =>
       data.receipts.find(receipt => receipt.transactionHash === hash);
+
+    // First pass: save all implementation names by their contract address
+    data.transactions.forEach(tx => {
+      if (tx.contractName && tx.contractAddress) {
+        contractNames[networkId][tx.contractAddress.toLowerCase()] = tx.contractName;
+      }
+    });
 
     data.transactions.forEach(tx => {
       if (tx.contractName && tx.contractAddress) {
@@ -89,10 +111,42 @@ export function generateNetworksJson({
             currentBlockNumber,
           ];
 
-          network[networkName][tx.contractName] = {
-            address: tx.contractAddress,
-            startBlock: currentBlockNumber,
-          };
+          if (tx.contractName === 'TransparentUpgradeableProxy') {
+            // Find the implementation contract based on the upgradeAndCall transaction
+            const upgradeAndCallTx = data.transactions.find(
+              t =>
+                t.transactionType === 'CALL' &&
+                t.function === 'upgradeAndCall(address,address,bytes)' &&
+                t.arguments &&
+                t.arguments.length > 2 &&
+                t.arguments[0] === tx.contractAddress
+            );
+            if (upgradeAndCallTx && upgradeAndCallTx.arguments) {
+              const proxyAddress = upgradeAndCallTx.arguments[0];
+              const implementationAddress = upgradeAndCallTx.arguments[1];
+              const implementationName =
+                contractNames[networkId][implementationAddress.toLowerCase()];
+              if (implementationName) {
+                const baseName = implementationName.replace(
+                  'Implementation',
+                  ''
+                );
+                network[networkName][baseName] = {
+                  address: proxyAddress,
+                  startBlock: currentBlockNumber,
+                };
+                network[networkName][`${baseName}Implementation`] = {
+                  address: implementationAddress,
+                  startBlock: currentBlockNumber,
+                };
+              }
+            }
+          } else {
+            network[networkName][tx.contractName] = {
+              address: tx.contractAddress,
+              startBlock: currentBlockNumber,
+            };
+          }
         }
       }
     });
