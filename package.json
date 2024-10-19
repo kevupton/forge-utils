@@ -9,7 +9,6 @@
     "forge-utils": "bin/forge-utils.js"
   },
   "dependencies": {
-    "forge-utils": "file:.yalc/forge-utils",
     "glob": "^10.3.10",
     "yargs": "^17.7.2"
   },
