@@ -11,9 +11,16 @@ interface Transaction {
   transactionType?: string;
 }
 
+interface Log {
+  address: string;
+  topics: string[];
+  data: string;
+}
+
 interface Receipt {
   transactionHash: string;
   blockNumber: string;
+  logs?: Log[];
 }
 
 interface Data {
@@ -41,6 +48,8 @@ interface Options {
 
 const contractTimestamps: Record<string, Record<string, [number, number]>> = {};
 const contractNames: Record<string, Record<string, string>> = {};
+const implementationAddresses: Record<string, Set<string>> = {};
+const implementationFor: Record<string, Record<string, string>> = {};
 
 export function generateNetworksJson({
   output,
@@ -64,93 +73,118 @@ export function generateNetworksJson({
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
   const network: NetworkConfig = {};
-  files.forEach(file => {
-    const content = fs.readFileSync(file, 'utf8');
-    const data: Data = JSON.parse(content);
+  const receipts: Receipt[] = [];
 
-    // Skip files that don't match the specified environment
-    if ((data.meta?.env ?? 'default') !== env) {
-      return;
-    }
+  // Preload all file contents
+  const txs = files
+    .flatMap(file => {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Data;
+      const pieces = file.split('/');
+      const networkId = pieces[pieces.length - 2];
+      const networkName = subgraphData[networkId];
 
-    const pieces = file.split('/');
-    const networkId = pieces[pieces.length - 2];
-    const networkName = subgraphData[networkId];
-    network[networkName] = network[networkName] || {};
-    contractTimestamps[networkId] = contractTimestamps[networkId] || {};
-    contractNames[networkId] = contractNames[networkId] || {};
-
-    const receipt = (hash: string): Receipt | undefined =>
-      data.receipts.find(receipt => receipt.transactionHash === hash);
-
-    // First pass: save all implementation names by their contract address
-    data.transactions.forEach(tx => {
-      if (tx.contractName && tx.contractAddress) {
-        contractNames[networkId][tx.contractAddress.toLowerCase()] = tx.contractName;
+      // Skip files that don't match the specified environment
+      if ((data.meta?.env ?? 'default') !== env) {
+        return [];
       }
-    });
 
-    data.transactions.forEach(tx => {
-      if (tx.contractName && tx.contractAddress) {
-        const r = receipt(tx.hash);
-        const currentBlockNumber =
-          +BigInt(r?.blockNumber || '0').toString() ||
-          contractTimestamps[networkId][tx.contractName]?.[1] ||
-          0;
+      if (!network[networkName]) network[networkName] = {};
+      if (!contractTimestamps[networkId]) contractTimestamps[networkId] = {};
+      if (!contractNames[networkId]) contractNames[networkId] = {};
+      if (!implementationAddresses[networkId])
+        implementationAddresses[networkId] = new Set();
+      if (!implementationFor[networkId]) implementationFor[networkId] = {};
 
-        const prevTimestamp =
-          contractTimestamps[networkId][tx.contractName]?.[0] || 0;
+      receipts.push(...data.receipts);
 
+      return data.transactions.map(tx => ({tx, networkId, networkName, data}));
+    })
+    .sort((a, b) => a.data.timestamp - b.data.timestamp);
+
+  // First pass: save all contract names and implementation addresses
+  txs.forEach(({tx, networkId}) => {
+    if (tx.contractName && tx.contractAddress) {
+      const lowercaseAddress = tx.contractAddress.toLowerCase();
+      contractNames[networkId][lowercaseAddress] = tx.contractName;
+      if (tx.contractName.endsWith('Implementation')) {
+        implementationAddresses[networkId].add(lowercaseAddress);
+      }
+    }
+  });
+
+  // Second pass: process upgrades and deployments
+  txs.forEach(({tx, networkId}) => {
+    const receipt = receipts.find(r => r.transactionHash === tx.hash);
+    if (receipt && receipt.logs) {
+      receipt.logs.forEach(log => {
         if (
-          currentBlockNumber &&
-          (prevTimestamp < data.timestamp ||
-            !network[networkName]?.[tx.contractName]?.startBlock)
+          log.topics[0].toLowerCase() ===
+          '0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b'
         ) {
-          contractTimestamps[networkId][tx.contractName] = [
-            data.timestamp,
-            currentBlockNumber,
-          ];
+          // This is the Upgraded event
+          const implementationAddress = (
+            '0x' + log.topics[1].slice(-40)
+          ).toLowerCase();
+          const implementationName =
+            contractNames[networkId][implementationAddress];
+          implementationAddresses[networkId].add(implementationName);
 
-          if (tx.contractName === 'TransparentUpgradeableProxy') {
-            // Find the implementation contract based on the upgradeAndCall transaction
-            const upgradeAndCallTx = data.transactions.find(
-              t =>
-                t.transactionType === 'CALL' &&
-                t.function === 'upgradeAndCall(address,address,bytes)' &&
-                t.arguments &&
-                t.arguments.length > 2 &&
-                t.arguments[0] === tx.contractAddress
-            );
-            if (upgradeAndCallTx && upgradeAndCallTx.arguments) {
-              const proxyAddress = upgradeAndCallTx.arguments[0];
-              const implementationAddress = upgradeAndCallTx.arguments[1];
-              const implementationName =
-                contractNames[networkId][implementationAddress.toLowerCase()];
-              if (implementationName) {
-                const baseName = implementationName.replace(
-                  'Implementation',
-                  ''
-                );
-                network[networkName][baseName] = {
-                  address: proxyAddress,
-                  startBlock: currentBlockNumber,
-                };
-                network[networkName][`${baseName}Implementation`] = {
-                  address: implementationAddress,
-                  startBlock: currentBlockNumber,
-                };
-              }
-            }
+          if (implementationName) {
+            const baseName = implementationName.replace('Implementation', '');
+            const proxyAddress = log.address.toLowerCase();
+            implementationFor[networkId][proxyAddress] = baseName;
+          }
+        }
+      });
+    }
+  });
+
+  txs.forEach(({tx, networkId, networkName, data}) => {
+    const receipt = receipts.find(r => r.transactionHash === tx.hash);
+    if (tx.contractName && tx.contractAddress) {
+      const currentBlockNumber = +BigInt(
+        receipt?.blockNumber || '0'
+      ).toString();
+      const lowercaseAddress = tx.contractAddress.toLowerCase();
+
+      if (
+        currentBlockNumber &&
+        (contractTimestamps[networkId][tx.contractName]?.[0] < data.timestamp ||
+          !network[networkName]?.[tx.contractName]?.startBlock)
+      ) {
+        contractTimestamps[networkId][tx.contractName] = [
+          data.timestamp,
+          currentBlockNumber,
+        ];
+
+        if (tx.contractName === 'TransparentUpgradeableProxy') {
+          const name = implementationFor[networkId][lowercaseAddress];
+          if (name) {
+            network[networkName][name] = {
+              address: lowercaseAddress,
+              startBlock: currentBlockNumber,
+            };
+          } else {
+            console.error('no implementation found', lowercaseAddress);
+          }
+        } else {
+          if (implementationAddresses[networkId].has(tx.contractName)) {
+            const baseName = tx.contractName.replace('Implementation', '');
+            network[networkName][`${baseName}Implementation`] = {
+              address: lowercaseAddress,
+              startBlock: currentBlockNumber,
+            };
           } else {
             network[networkName][tx.contractName] = {
-              address: tx.contractAddress,
+              address: lowercaseAddress,
               startBlock: currentBlockNumber,
             };
           }
         }
       }
-    });
+    }
   });
+  console.log(implementationAddresses);
 
   fs.writeFileSync(
     fs.existsSync(output) && fs.statSync(output).isDirectory()

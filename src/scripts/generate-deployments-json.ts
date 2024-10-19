@@ -120,7 +120,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
           const baseName = implementationName.replace('Implementation', '');
           config[env][chainId][`${baseName}Implementation`] =
             implementationAddress;
-          implementationAddresses[chainId].add(implementationAddress);
+          implementationAddresses[chainId].add(implementationName);
 
           const proxyAddress = log.address.toLowerCase();
           implementationFor[chainId][proxyAddress] = baseName;
@@ -137,7 +137,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
       if (tx.contractName === 'TransparentUpgradeableProxy') {
         const baseName = implementationFor[chainId][contractAddress];
         config[env][chainId][baseName] = contractAddress;
-      } else if (!implementationAddresses[chainId].has(contractAddress)) {
+      } else if (!implementationAddresses[chainId].has(tx.contractName)) {
         config[env][chainId][tx.contractName] = contractAddress;
       }
     }
