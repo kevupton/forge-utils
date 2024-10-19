@@ -16,8 +16,13 @@ export const appendMetaCommand: CommandModule = {
       type: 'array',
       default: [],
     },
+    newFiles: {
+      describe: 'Only process files that are new to Git',
+      type: 'boolean',
+      default: false,
+    },
   },
   handler: (argv: any) => {
-    appendMetaToBroadcastFiles(argv.dir, argv.meta);
+    appendMetaToBroadcastFiles(argv.dir, argv.meta, argv.newFiles);
   },
 };

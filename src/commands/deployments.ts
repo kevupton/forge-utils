@@ -1,5 +1,6 @@
 import {CommandModule} from 'yargs';
 import {generateDeploymentsJson} from '../scripts/generate-deployments-json';
+import path from 'path';
 
 export const deploymentsCommand: CommandModule = {
   command: 'deployments',
@@ -7,9 +8,9 @@ export const deploymentsCommand: CommandModule = {
     'Generates a deployments.json based on the forge deployment scripts',
   builder: {
     dir: {
-      describe: 'Directory of forge build',
+      describe: 'Directory of forge broadcast files',
       type: 'string',
-      default: process.cwd(),
+      default: path.join(process.cwd(), 'broadcast'),
     },
     output: {
       describe: 'Where to output the networks.json to',

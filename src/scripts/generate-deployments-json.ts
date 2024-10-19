@@ -36,7 +36,7 @@ const contractTimestamps: Record<string, Record<string, number>> = {};
 const contractNames: Record<string, Record<string, string>> = {};
 
 export function generateDeploymentsJson({output, dir}: Options) {
-  const inputDir = path.join(dir, 'broadcast', '**/*.json');
+  const inputDir = path.join(dir, '**/*.json');
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
@@ -64,10 +64,10 @@ export function generateDeploymentsJson({output, dir}: Options) {
     const chainId = pieces[pieces.length - 2];
     const env = data.meta?.env || 'default';
 
-    config[env] = config[env] || {};
-    config[env][chainId] = config[env][chainId] || {};
-    contractTimestamps[chainId] = contractTimestamps[chainId] || {};
-    contractNames[chainId] = contractNames[chainId] || {};
+    if (!config[env]) config[env] = {};
+    if (!config[env][chainId]) config[env][chainId] = {};
+    if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
+    if (!contractNames[chainId]) contractNames[chainId] = {};
 
     // If there's no existing contractNames for this chainId, initialize it from the loaded config
     if (Object.keys(contractNames[chainId]).length === 0) {
@@ -125,6 +125,18 @@ export function generateDeploymentsJson({output, dir}: Options) {
         }
       }
     });
+  });
+
+  // Remove empty objects before writing to file
+  Object.keys(config).forEach(env => {
+    Object.keys(config[env]).forEach(chainId => {
+      if (Object.keys(config[env][chainId]).length === 0) {
+        delete config[env][chainId];
+      }
+    });
+    if (Object.keys(config[env]).length === 0) {
+      delete config[env];
+    }
   });
 
   fs.writeFileSync(deploymentsPath, JSON.stringify(config, null, 2));
