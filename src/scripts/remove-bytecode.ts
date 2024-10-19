@@ -1,7 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-export function removeBytecode(directoryPath: string): void {
+let totalBytesRemoved = 0;
+
+export function removeBytecode(
+  directoryPath: string,
+  isRecursive = false
+): void {
   try {
     const files = fs.readdirSync(directoryPath, {withFileTypes: true});
 
@@ -18,8 +23,16 @@ export function removeBytecode(directoryPath: string): void {
         file.name !== '.' &&
         file.name !== '..'
       ) {
-        removeBytecode(filePath);
+        removeBytecode(filePath, true);
       }
+    }
+
+    if (!isRecursive) {
+      console.log(
+        `Total megabytes removed: ${(totalBytesRemoved / (1024 * 1024)).toFixed(
+          2
+        )} MB`
+      );
     }
   } catch (err) {
     console.error(`Error processing directory: ${directoryPath}`, err);
@@ -36,8 +49,11 @@ function cleanFile(filePath: string): void {
       'const _bytecode = "0x";'
     );
 
+    const bytesRemoved =
+      Buffer.byteLength(data) - Buffer.byteLength(updatedContent);
+    totalBytesRemoved += bytesRemoved;
+
     fs.writeFileSync(filePath, updatedContent, 'utf8');
-    console.log(`Successfully cleaned file: ${filePath}`);
   } catch (err) {
     console.error(`Error processing file: ${filePath}`, err);
   }
