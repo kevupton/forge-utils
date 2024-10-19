@@ -14,6 +14,13 @@ interface Transaction {
 interface Receipt {
   transactionHash: string;
   blockNumber: string;
+  logs?: Log[];
+}
+
+interface Log {
+  address: string;
+  topics: string[];
+  data: string;
 }
 
 interface Data {
@@ -34,6 +41,8 @@ interface Options {
 
 const contractTimestamps: Record<string, Record<string, number>> = {};
 const contractNames: Record<string, Record<string, string>> = {};
+const implementationAddresses: Record<string, Set<string>> = {};
+const implementationFor: Record<string, Record<string, string>> = {};
 
 export function generateDeploymentsJson({output, dir}: Options) {
   const inputDir = path.join(dir, '**/*.json');
@@ -56,75 +65,82 @@ export function generateDeploymentsJson({output, dir}: Options) {
   };
 
   const config: DeploymentConfig = loadConfig();
-  files.forEach(file => {
-    const content = fs.readFileSync(file, 'utf8');
-    const data: Data = JSON.parse(content);
 
-    const pieces = file.split('/');
-    const chainId = pieces[pieces.length - 2];
-    const env = data.meta?.env || 'default';
+  const receipts: Receipt[] = [];
+  // Preload all file contents
+  const txs = files
+    .flatMap(file => {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Data;
+      const pieces = file.split('/');
+      const chainId = pieces[pieces.length - 2];
+      const env = data.meta?.env || 'default';
 
-    if (!config[env]) config[env] = {};
-    if (!config[env][chainId]) config[env][chainId] = {};
-    if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
-    if (!contractNames[chainId]) contractNames[chainId] = {};
+      if (!contractNames[chainId]) contractNames[chainId] = {};
+      if (!implementationAddresses[chainId])
+        implementationAddresses[chainId] = new Set();
 
-    // If there's no existing contractNames for this chainId, initialize it from the loaded config
-    if (Object.keys(contractNames[chainId]).length === 0) {
-      Object.entries(config[env][chainId]).forEach(([key, value]) => {
-        const address = config[env][chainId][key];
-        if (address) {
-          contractNames[chainId][address.toLowerCase()] = value;
-        }
-      });
+      if (!config[env]) config[env] = {};
+      if (!config[env][chainId]) config[env][chainId] = {};
+      if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
+      if (!implementationFor[chainId]) implementationFor[chainId] = {};
+
+      receipts.push(...data.receipts);
+
+      return data.transactions.map(tx => ({tx, env, chainId, data}));
+    })
+    .sort((a, b) => a.data.timestamp - b.data.timestamp);
+
+  // First pass: save all contract names and implementation addresses
+  txs.forEach(({tx, chainId}) => {
+    if (tx.contractName && tx.contractAddress) {
+      contractNames[chainId][tx.contractAddress.toLowerCase()] =
+        tx.contractName;
+      if (tx.contractName.endsWith('Implementation')) {
+        implementationAddresses[chainId].add(tx.contractAddress.toLowerCase());
+      }
     }
+  });
 
-    // First pass: save all implementation names by their contract address
-    data.transactions.forEach(tx => {
-      if (tx.contractName && tx.contractAddress) {
-        contractNames[chainId][tx.contractAddress.toLowerCase()] =
-          tx.contractName;
-      }
-    });
+  // Second pass: process upgrades and deployments
+  txs.forEach(({tx, chainId, env}) => {
+    const receipt = receipts.find(r => r.transactionHash === tx.hash);
+    if (!receipt || !receipt.logs) return;
+    receipt.logs.forEach(log => {
+      if (
+        log.topics[0].toLowerCase() ===
+        '0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b'
+      ) {
+        // This is the Upgraded event
+        const implementationAddress = (
+          '0x' + log.topics[1].slice(-40)
+        ).toLowerCase();
+        const implementationName =
+          contractNames[chainId][implementationAddress];
+        if (implementationName) {
+          const baseName = implementationName.replace('Implementation', '');
+          config[env][chainId][`${baseName}Implementation`] =
+            implementationAddress;
+          implementationAddresses[chainId].add(implementationAddress);
 
-    data.transactions.forEach(tx => {
-      if (tx.contractName && tx.contractAddress && tx.hash) {
-        const prevTimestamp = contractTimestamps[chainId][tx.contractName] || 0;
-
-        if (prevTimestamp < data.timestamp) {
-          contractTimestamps[chainId][tx.contractName] = data.timestamp;
-
-          if (tx.contractName === 'TransparentUpgradeableProxy') {
-            // Find the implementation contract based on the upgradeAndCall transaction
-            const upgradeAndCallTx = data.transactions.find(
-              t =>
-                t.transactionType === 'CALL' &&
-                t.function === 'upgradeAndCall(address,address,bytes)' &&
-                t.arguments &&
-                t.arguments.length > 2 &&
-                t.arguments[0] === tx.contractAddress
-            );
-            if (upgradeAndCallTx && upgradeAndCallTx.arguments) {
-              const proxyAddress = upgradeAndCallTx.arguments[0];
-              const implementationAddress = upgradeAndCallTx.arguments[1];
-              const implementationName =
-                contractNames[chainId][implementationAddress.toLowerCase()];
-              if (implementationName) {
-                const baseName = implementationName.replace(
-                  'Implementation',
-                  ''
-                );
-                config[env][chainId][baseName] = proxyAddress;
-                config[env][chainId][`${baseName}Implementation`] =
-                  implementationAddress;
-              }
-            }
-          } else {
-            config[env][chainId][tx.contractName] = tx.contractAddress;
-          }
+          const proxyAddress = log.address.toLowerCase();
+          implementationFor[chainId][proxyAddress] = baseName;
         }
       }
     });
+  });
+
+  txs.forEach(({tx, chainId, data, env}) => {
+    if (tx.contractName && tx.contractAddress && tx.hash) {
+      contractTimestamps[chainId][tx.contractName] = data.timestamp;
+      const contractAddress = tx.contractAddress.toLowerCase();
+
+      if (tx.contractName === 'TransparentUpgradeableProxy') {
+        const baseName = implementationFor[chainId][contractAddress];
+        config[env][chainId][baseName] = contractAddress;
+      } else if (!implementationAddresses[chainId].has(contractAddress)) {
+        config[env][chainId][tx.contractName] = contractAddress;
+      }
+    }
   });
 
   // Remove empty objects before writing to file
