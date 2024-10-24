@@ -8,7 +8,9 @@ export const appendMetaToBroadcastFiles = (
   meta: any,
   newFilesOnly = false
 ) => {
-  const files = sync(path.join(dir, '**/*.json'));
+  const files = sync(path.join(dir, '**/*.json')).filter(
+    file => !file.endsWith('run-latest.json')
+  );
   const filesToProcess = newFilesOnly ? getNewFiles(files) : files;
   processFiles(filesToProcess, meta);
 };

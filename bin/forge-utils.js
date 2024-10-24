@@ -2,4 +2,4 @@
 
 const path = require('path');
 
-require(path.join(__dirname, '../build/index.js'));
+require(path.join(__dirname, '../build/forge-utils.js'));
