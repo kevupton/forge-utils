@@ -3,6 +3,7 @@
   "version": "0.2.4",
   "description": "Utility scripts for working with a foundry project",
   "main": "build/index.js",
+  "typings": "build/index.d.ts",
   "author": "Kevin Upton <kevin@kei.fi>",
   "license": "MIT",
   "bin": {

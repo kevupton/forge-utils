@@ -5,7 +5,7 @@
     "outDir": "build",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "declaration": false,
+    "declaration": true,
     "resolveJsonModule": true
   },
   "include": [
