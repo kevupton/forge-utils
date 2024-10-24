@@ -184,7 +184,6 @@ export function generateNetworksJson({
       }
     }
   });
-  console.log(implementationAddresses);
 
   fs.writeFileSync(
     fs.existsSync(output) && fs.statSync(output).isDirectory()
