@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import {appendMetaToBroadcastFiles} from './append-meta-to-broadcasts-files';
+import {appendMetaToBroadcastFiles} from '../append-meta-to-broadcasts-files';
 
 describe('append-meta command', () => {
   let tempDir: string;

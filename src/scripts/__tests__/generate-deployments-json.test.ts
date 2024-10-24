@@ -1,5 +1,5 @@
 import fs from 'fs';
-import {generateDeploymentsJson} from './generate-deployments-json';
+import {generateDeploymentsJson} from '../generate-deployments-json';
 
 jest.mock('fs');
 jest.mock('glob');

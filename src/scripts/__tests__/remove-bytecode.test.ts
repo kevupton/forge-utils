@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {removeBytecode} from './remove-bytecode';
+import {removeBytecode} from '../remove-bytecode';
 
 jest.mock('fs');
 jest.mock('path');

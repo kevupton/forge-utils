@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {generateNetworksJson} from './generate-networks-json';
+import {generateNetworksJson} from '../generate-networks-json';
 
 jest.mock('fs');
 jest.mock('glob');
