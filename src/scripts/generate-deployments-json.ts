@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
+import { getAddress } from 'ethers';
 
 interface Transaction {
   contractName?: string;
@@ -130,7 +131,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
           const root = env
             ? (config[env][chainId] as Record<string, string>)
             : (config[chainId] as Record<string, string>);
-          root[`${baseName}Implementation`] = implementationAddress;
+          root[`${baseName}Implementation`] = getAddress(implementationAddress);
           implementationAddresses[chainId].add(implementationName);
 
           const proxyAddress = log.address.toLowerCase();
@@ -151,9 +152,9 @@ export function generateDeploymentsJson({output, dir}: Options) {
 
       if (tx.contractName === 'TransparentUpgradeableProxy') {
         const baseName = implementationFor[chainId][contractAddress];
-        root[baseName] = contractAddress;
+        root[baseName] = getAddress(contractAddress);
       } else if (!implementationAddresses[chainId].has(tx.contractName)) {
-        root[tx.contractName] = contractAddress;
+        root[tx.contractName] = getAddress(contractAddress);
       }
     }
   });

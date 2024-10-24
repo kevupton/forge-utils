@@ -185,7 +185,7 @@ describe('generateDeploymentsJson', () => {
           transactions: [
             {
               contractName: 'NewContract',
-              contractAddress: '0xnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn',
+              contractAddress: '0xffffffffffffffffffffffffffffffffffffffff',
               hash: '0xdddd',
             },
           ],
@@ -209,7 +209,7 @@ describe('generateDeploymentsJson', () => {
       existing: {
         '1': {
           ExistingContract: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          NewContract: '0xnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn',
+          NewContract: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
         },
       },
     });

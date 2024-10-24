@@ -9,6 +9,7 @@
     "forge-utils": "bin/forge-utils.js"
   },
   "dependencies": {
+    "ethers": "^6.13.4",
     "glob": "^10.3.10",
     "yargs": "^17.7.2"
   },
