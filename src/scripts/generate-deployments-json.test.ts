@@ -15,15 +15,15 @@ describe('generateDeploymentsJson', () => {
   it('should generate deployments JSON file correctly', () => {
     // Mock the glob sync function to return test files
     mockGlob.sync.mockReturnValue([
-      '/path/to/broadcast/1/run-latest.json',
-      '/path/to/broadcast/5/run-latest.json',
+      '/path/to/broadcast/1/run-1234.json',
+      '/path/to/broadcast/5/run-1234.json',
     ]);
 
     // Mock file system operations
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);
     mockFs.readFileSync.mockImplementation(path => {
-      if (path === '/path/to/broadcast/1/run-latest.json') {
+      if (path === '/path/to/broadcast/1/run-1234.json') {
         return JSON.stringify({
           transactions: [
             {
@@ -41,7 +41,7 @@ describe('generateDeploymentsJson', () => {
           timestamp: 1625097600,
           meta: {env: 'production'},
         });
-      } else if (path === '/path/to/broadcast/5/run-latest.json') {
+      } else if (path === '/path/to/broadcast/5/run-1234.json') {
         return JSON.stringify({
           transactions: [
             {
@@ -96,12 +96,12 @@ describe('generateDeploymentsJson', () => {
   });
 
   it('should handle TransparentUpgradeableProxy correctly', () => {
-    mockGlob.sync.mockReturnValue(['/path/to/broadcast/1/run-latest.json']);
+    mockGlob.sync.mockReturnValue(['/path/to/broadcast/1/run-1234.json']);
 
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);
     mockFs.readFileSync.mockImplementation(path => {
-      if (path === '/path/to/broadcast/1/run-latest.json') {
+      if (path === '/path/to/broadcast/1/run-1234.json') {
         return JSON.stringify({
           transactions: [
             {
@@ -125,9 +125,23 @@ describe('generateDeploymentsJson', () => {
               hash: '0xcccc',
             },
           ],
-          receipts: [],
+          receipts: [
+            {
+              transactionHash: '0xcccc',
+              blockNumber: '789',
+              logs: [
+                {
+                  address: '0x2222222222222222222222222222222222222222',
+                  topics: [
+                    '0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b',
+                    '0x0000000000000000000000001111111111111111111111111111111111111111',
+                  ],
+                  data: '0x',
+                },
+              ],
+            },
+          ],
           timestamp: 1625270400,
-          meta: {env: 'default'},
         });
       }
       throw new Error(`Unexpected file read: ${path}`);
@@ -144,17 +158,15 @@ describe('generateDeploymentsJson', () => {
       mockFs.writeFileSync.mock.calls[0][1] as string
     );
     expect(writtenContent).toEqual({
-      default: {
-        '1': {
-          Test: '0x2222222222222222222222222222222222222222',
-          TestImplementation: '0x1111111111111111111111111111111111111111',
-        },
+      '1': {
+        Test: '0x2222222222222222222222222222222222222222',
+        TestImplementation: '0x1111111111111111111111111111111111111111',
       },
     });
   });
 
   it('should handle existing deployments.json file', () => {
-    mockGlob.sync.mockReturnValue(['/path/to/broadcast/1/run-latest.json']);
+    mockGlob.sync.mockReturnValue(['/path/to/broadcast/1/run-1234.json']);
 
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);

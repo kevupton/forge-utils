@@ -32,7 +32,10 @@ interface Data {
   };
 }
 
-type DeploymentConfig = Record<string, Record<string, Record<string, string>>>;
+type DeploymentConfig = Record<
+  string,
+  Record<string, string | Record<string, string>>
+>;
 
 interface Options {
   output: string;
@@ -47,7 +50,9 @@ const implementationFor: Record<string, Record<string, string>> = {};
 export function generateDeploymentsJson({output, dir}: Options) {
   const inputDir = path.join(dir, '**/*.json');
 
-  const files = sync(inputDir).filter(file => file.endsWith('.json'));
+  const files = sync(inputDir).filter(
+    file => file.endsWith('.json') && !file.endsWith('run-latest.json')
+  );
 
   const deploymentsPath =
     fs.existsSync(output) && fs.statSync(output).isDirectory()
@@ -73,14 +78,18 @@ export function generateDeploymentsJson({output, dir}: Options) {
       const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Data;
       const pieces = file.split('/');
       const chainId = pieces[pieces.length - 2];
-      const env = data.meta?.env || 'default';
+      const env = data.meta?.env;
 
       if (!contractNames[chainId]) contractNames[chainId] = {};
       if (!implementationAddresses[chainId])
         implementationAddresses[chainId] = new Set();
 
-      if (!config[env]) config[env] = {};
-      if (!config[env][chainId]) config[env][chainId] = {};
+      if (env) {
+        if (!config[env]) config[env] = {};
+        if (!config[env][chainId]) config[env][chainId] = {};
+      } else {
+        if (!config[chainId]) config[chainId] = {};
+      }
       if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
       if (!implementationFor[chainId]) implementationFor[chainId] = {};
 
@@ -118,8 +127,10 @@ export function generateDeploymentsJson({output, dir}: Options) {
           contractNames[chainId][implementationAddress];
         if (implementationName) {
           const baseName = implementationName.replace('Implementation', '');
-          config[env][chainId][`${baseName}Implementation`] =
-            implementationAddress;
+          const root = env
+            ? (config[env][chainId] as Record<string, string>)
+            : (config[chainId] as Record<string, string>);
+          root[`${baseName}Implementation`] = implementationAddress;
           implementationAddresses[chainId].add(implementationName);
 
           const proxyAddress = log.address.toLowerCase();
@@ -134,24 +145,30 @@ export function generateDeploymentsJson({output, dir}: Options) {
       contractTimestamps[chainId][tx.contractName] = data.timestamp;
       const contractAddress = tx.contractAddress.toLowerCase();
 
+      const root: Record<string, string> = env
+        ? (config[env][chainId] as Record<string, string>)
+        : (config[chainId] as Record<string, string>);
+
       if (tx.contractName === 'TransparentUpgradeableProxy') {
         const baseName = implementationFor[chainId][contractAddress];
-        config[env][chainId][baseName] = contractAddress;
+        root[baseName] = contractAddress;
       } else if (!implementationAddresses[chainId].has(tx.contractName)) {
-        config[env][chainId][tx.contractName] = contractAddress;
+        root[tx.contractName] = contractAddress;
       }
     }
   });
 
   // Remove empty objects before writing to file
-  Object.keys(config).forEach(env => {
-    Object.keys(config[env]).forEach(chainId => {
-      if (Object.keys(config[env][chainId]).length === 0) {
-        delete config[env][chainId];
+  Object.keys(config).forEach(key => {
+    if (typeof config[key] === 'object') {
+      Object.keys(config[key]).forEach(subKey => {
+        if (Object.keys(config[key][subKey]).length === 0) {
+          delete config[key][subKey];
+        }
+      });
+      if (Object.keys(config[key]).length === 0) {
+        delete config[key];
       }
-    });
-    if (Object.keys(config[env]).length === 0) {
-      delete config[env];
     }
   });
 
