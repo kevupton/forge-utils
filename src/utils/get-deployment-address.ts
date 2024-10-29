@@ -1,9 +1,13 @@
-export const getDeployment = (
+export const getDeploymentAddress = (
   deployments: Record<string, any>,
+  name: string,
   chainId: string | number,
   env?: string
-) => {
-  const result = env ? deployments[env][chainId] : deployments[chainId];
+): string => {
+  const result = env
+    ? deployments?.[env]?.[chainId]?.[name]
+    : deployments?.[chainId]?.[name];
+
   if (!result) {
     throw new Error(
       `Deployment for chainId ${chainId}${
@@ -11,5 +15,6 @@ export const getDeployment = (
       } not found`
     );
   }
+
   return result;
 };

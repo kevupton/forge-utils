@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
-import { getAddress } from 'ethers';
+import {getAddress} from 'ethers';
 
 interface Transaction {
   contractName?: string;
