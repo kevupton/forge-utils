@@ -70,9 +70,16 @@ export function generateNetworksJson({
 
   inputDir = path.join(inputDir, '**/*.json');
 
+  const outputPath =
+    fs.existsSync(output) && fs.statSync(output).isDirectory()
+      ? path.join(output, 'networks.json')
+      : output;
+
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
 
-  const network: NetworkConfig = {};
+  const network: NetworkConfig = fs.existsSync(outputPath)
+    ? JSON.parse(fs.readFileSync(outputPath, 'utf8'))
+    : {};
   const receipts: Receipt[] = [];
 
   // Preload all file contents
@@ -185,12 +192,7 @@ export function generateNetworksJson({
     }
   });
 
-  fs.writeFileSync(
-    fs.existsSync(output) && fs.statSync(output).isDirectory()
-      ? path.join(output, 'networks.json')
-      : output,
-    JSON.stringify(network, null, 2)
-  );
+  fs.writeFileSync(outputPath, JSON.stringify(network, null, 2));
 }
 
 const subgraphData: Record<string, string> = {
