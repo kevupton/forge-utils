@@ -98,6 +98,7 @@ export function generateNetworksJson({
 
       // Skip files that don't match the specified environment
       if ((data.meta?.env ?? 'default') !== env) {
+        logger.debug(`skipping ${file} ${data.meta?.env ?? 'default'} !== ${env}`);
         return [];
       }
 
@@ -126,6 +127,7 @@ export function generateNetworksJson({
       contractNames[networkId][lowercaseAddress] = tx.contractName;
       if (tx.contractName.endsWith('Implementation')) {
         implementationAddresses[networkId].add(lowercaseAddress);
+        logger.debug(`registered implementation ${tx.contractName} ${lowercaseAddress}`);
       }
     }
   });
@@ -151,6 +153,7 @@ export function generateNetworksJson({
             const baseName = implementationName.replace('Implementation', '');
             const proxyAddress = log.address.toLowerCase();
             implementationFor[networkId][proxyAddress] = baseName;
+            logger.debug(`registered implementation ${implementationName} ${implementationAddress} as ${baseName} for proxy ${proxyAddress}`);
           }
         }
       });
@@ -186,6 +189,7 @@ export function generateNetworksJson({
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
+              logger.debug(`added proxy ${tx.contractName} ${lowercaseAddress} at block ${currentBlockNumber}`);
             } else {
               logger.error(
                 'no implementation found',
@@ -200,11 +204,13 @@ export function generateNetworksJson({
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
+              logger.debug(`added implementation ${tx.contractName} ${lowercaseAddress} as ${baseName} at block ${currentBlockNumber}`);
             } else {
               network[networkName][tx.contractName] = {
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
+              logger.debug(`added ${tx.contractName} ${lowercaseAddress} at block ${currentBlockNumber}`);
             }
           }
         }
@@ -212,6 +218,7 @@ export function generateNetworksJson({
     }
   });
 
+  logger.debug('customDeployments ' + JSON.stringify(customDeployments));
   Object.entries(customDeployments).forEach(([networkId, deployments]) => {
     Object.entries(deployments).forEach(([contractName, address]) => {
       const result = txs
@@ -225,10 +232,13 @@ export function generateNetworksJson({
             )
         );
 
+        
       if (!result) {
         logger.error(`no transaction found ${contractName} ${address}`);
         return;
       }
+
+      logger.debug('result tx ' + JSON.stringify(result?.tx));
 
       const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
 
@@ -240,7 +250,7 @@ export function generateNetworksJson({
       }
 
       logger.debug(
-        `adding ${contractName} ${address} ${result.tx.hash} at block ${receipt.blockNumber}`
+        `added custom deployment ${contractName} ${address} ${result.tx.hash} at block ${receipt.blockNumber}`
       );
       network[subgraphData[networkId]][contractName] = {
         address,

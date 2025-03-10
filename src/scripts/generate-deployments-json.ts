@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
 import {getAddress} from 'ethers';
-import {DEPLOYMENTS_FILENAME} from '../lib';
+import {DEPLOYMENTS_FILENAME, logger} from '../lib';
 
 interface Transaction {
   contractName?: string;
@@ -88,20 +88,23 @@ export function generateDeploymentsJson({output, dir}: Options) {
       if (!implementationAddresses[chainId])
         implementationAddresses[chainId] = new Set();
 
+      let syncMetaDeployments: () => void = () => {};
       if (env) {
         if (!config[env]) config[env] = {};
         if (!config[env][chainId]) config[env][chainId] = {};
-        Object.assign(config[env][chainId], data.meta?.deployments ?? {});
+        syncMetaDeployments = () => 
+          Object.assign(config[env][chainId], data.meta?.deployments ?? {});
       } else {
         if (!config[chainId]) config[chainId] = {};
-        Object.assign(config[chainId], data.meta?.deployments ?? {});
+        syncMetaDeployments = () =>
+          Object.assign(config[chainId], data.meta?.deployments ?? {});
       }
       if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
       if (!implementationFor[chainId]) implementationFor[chainId] = {};
 
       receipts.push(...data.receipts);
 
-      return data.transactions.map(tx => ({tx, env, chainId, data}));
+      return data.transactions.map(tx => ({tx, env, chainId, data, syncMetaDeployments}));
     })
     .sort((a, b) => a.data.timestamp - b.data.timestamp);
 
@@ -146,7 +149,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
     });
   });
 
-  txs.forEach(({tx, chainId, data, env}) => {
+  txs.forEach(({tx, chainId, data, env, syncMetaDeployments}) => {
     if (tx.contractName && tx.contractAddress && tx.hash) {
       contractTimestamps[chainId][tx.contractName] = data.timestamp;
       const contractAddress = tx.contractAddress.toLowerCase();
@@ -164,6 +167,7 @@ export function generateDeploymentsJson({output, dir}: Options) {
         }
       }
     }
+    syncMetaDeployments();
   });
 
   // Remove empty objects before writing to file
