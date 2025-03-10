@@ -10,10 +10,9 @@ jest.mock('fs', () => ({
   readFileSync: jest.fn(),
 }));
 
-// Mock console functions
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+// Mock logger
+jest.mock('../../utils/logger');
+import {logger} from '../../utils/logger';
 
 describe('recordMeta', () => {
   beforeEach(() => {
@@ -34,6 +33,14 @@ describe('recordMeta', () => {
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining('meta.json'),
       expect.stringContaining('"env": "production"')
+    );
+
+    // Check if logger was called
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Metadata recorded to')
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Recorded entry: env ->')
     );
   });
 

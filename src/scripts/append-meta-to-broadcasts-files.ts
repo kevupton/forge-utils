@@ -4,7 +4,7 @@ import {execSync} from 'child_process';
 import {sync} from 'glob';
 import _ from 'lodash';
 import {FORGE_UTILS_DIR, META_FILENAME} from '../utils/constants';
-import {parseValue} from '../utils';
+import {parseValue, logger} from '../utils';
 
 interface MetaArgs {
   [key: string]: any;
@@ -47,7 +47,7 @@ function loadMetaFromFile(cwd: string): Record<string, any> {
     try {
       return JSON.parse(fs.readFileSync(metaPath, 'utf8'));
     } catch (e) {
-      console.warn(`Failed to parse ${metaPath}, ignoring file`);
+      logger.warn(`Failed to parse ${metaPath}, ignoring file`);
     }
   }
   return {};
@@ -81,9 +81,9 @@ function removeMetaFile(cwd: string): void {
   if (fs.existsSync(metaPath)) {
     try {
       fs.unlinkSync(metaPath);
-      console.log(`Successfully removed ${metaPath}`);
+      logger.info(`Successfully removed ${metaPath}`);
     } catch (e) {
-      console.warn(`Failed to remove ${metaPath}: ${e}`);
+      logger.warn(`Failed to remove ${metaPath}: ${e}`);
     }
   }
 }

@@ -4,6 +4,10 @@ import {removeBytecode} from '../remove-bytecode';
 
 jest.mock('fs');
 jest.mock('path');
+jest.mock('../../utils/logger');
+
+// Import the mocked logger
+import {logger} from '../../utils/logger';
 
 describe('removeBytecode', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;
@@ -53,8 +57,6 @@ describe('removeBytecode', () => {
 
     mockPath.join.mockImplementation((...paths) => paths.join('/'));
 
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-
     // Call the function
     removeBytecode('/mock/path');
 
@@ -75,33 +77,25 @@ describe('removeBytecode', () => {
       'utf8'
     );
     expect(mockPath.join).toHaveBeenCalledWith('/mock/path', 'subdir');
-    expect(consoleLogSpy).toHaveBeenCalledWith(
+    expect(logger.info).toHaveBeenCalledWith(
       expect.stringContaining('Total megabytes removed:')
     );
-
-    consoleLogSpy.mockRestore();
   });
 
   it('should handle errors when reading directory', () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
     mockFs.readdirSync.mockImplementation(() => {
       throw new Error('Mock readdir error');
     });
 
     removeBytecode('/mock/path');
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       'Error processing directory: /mock/path',
       expect.any(Error)
     );
-
-    consoleErrorSpy.mockRestore();
   });
 
   it('should handle errors when reading files', () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
     mockFs.readdirSync.mockReturnValue([
       {name: 'Contract.ts', isFile: () => true, isDirectory: () => false},
     ] as any);
@@ -112,17 +106,13 @@ describe('removeBytecode', () => {
 
     removeBytecode('/mock/path');
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       'Error processing file: /mock/path/Contract.ts',
       expect.any(Error)
     );
-
-    consoleErrorSpy.mockRestore();
   });
 
   it('should handle errors when writing files', () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
     mockFs.readdirSync.mockReturnValue([
       {name: 'Contract.ts', isFile: () => true, isDirectory: () => false},
     ] as any);
@@ -135,11 +125,9 @@ describe('removeBytecode', () => {
 
     removeBytecode('/mock/path');
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       'Error processing file: /mock/path/Contract.ts',
       expect.any(Error)
     );
-
-    consoleErrorSpy.mockRestore();
   });
 });

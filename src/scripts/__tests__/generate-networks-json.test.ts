@@ -5,6 +5,10 @@ import {generateNetworksJson} from '../generate-networks-json';
 jest.mock('fs');
 jest.mock('glob');
 jest.mock('path');
+jest.mock('../../utils/logger');
+
+// Import the mocked logger
+import {logger} from '../../utils/logger';
 
 describe('generateNetworksJson', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;
@@ -256,67 +260,83 @@ describe('generateNetworksJson', () => {
   });
 
   it('should handle custom deployments from meta.deployments correctly', () => {
+    // Mock the glob sync function to return test files
     mockGlob.sync.mockReturnValue([
       '/path/to/package/broadcasts/1/run-latest.json',
     ]);
 
+    // Mock file system operations
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);
     mockFs.readFileSync.mockImplementation(path => {
-      if (path === '/path/to/output/networks.json') {
-        return JSON.stringify({});
-      }
-      return JSON.stringify({
-        transactions: [
-          {
-            contractName: 'MainContract',
-            contractAddress: '0x1111111111111111111111111111111111111111',
-            hash: '0xaaaa',
-            additionalContracts: [
-              {
-                address: '0x3333333333333333333333333333333333333333',
-              },
-            ],
-          },
-          {
-            contractName: 'AnotherContract',
-            contractAddress: '0x2222222222222222222222222222222222222222',
-            hash: '0xbbbb',
-          },
-        ],
-        receipts: [
-          {transactionHash: '0xaaaa', blockNumber: '100'},
-          {transactionHash: '0xbbbb', blockNumber: '200'},
-        ],
-        timestamp: 1625097600,
-        meta: {
-          env: 'default',
-          deployments: {
+      if (path === '/path/to/package/broadcasts/1/run-latest.json') {
+        return JSON.stringify({
+          transactions: [
+            {
+              transactionType: 'CREATE',
+              contractName: 'TestImplementation',
+              contractAddress: '0x1111111111111111111111111111111111111111',
+              hash: '0xabcdef',
+            },
+            {
+              transactionType: 'CREATE',
+              contractName: 'Test',
+              contractAddress: '0x2222222222222222222222222222222222222222',
+              hash: '0xabcdef2',
+            },
+            {
+              transactionType: 'CREATE',
+              contractName: 'TransparentUpgradeableProxy',
+              contractAddress: '0x1234567890123456789012345678901234567890',
+              hash: '0xabcdef3',
+              additionalContracts: [
+                {
+                  address: '0x3333333333333333333333333333333333333333',
+                },
+              ],
+            },
+          ],
+          receipts: [
+            {
+              transactionHash: '0xabcdef',
+              blockNumber: '123',
+            },
+            {
+              transactionHash: '0xabcdef2',
+              blockNumber: '124',
+            },
+            {
+              transactionHash: '0xabcdef3',
+              blockNumber: '100',
+            },
+          ],
+          timestamp: 1625097600,
+          meta: {env: 'default', deployments: {
             CustomContract1: '0x3333333333333333333333333333333333333333',
             CustomContract2: '0x4444444444444444444444444444444444444444',
-          },
-        },
-      });
+          }},
+        });
+      }
+      return '{}';
     });
 
-    const options = {
+    // Mock writeFileSync to capture the written content
+    let writtenContent: any;
+    mockFs.writeFileSync.mockImplementation((_, content) => {
+      writtenContent = JSON.parse(content as string);
+    });
+
+    // Run the function
+    generateNetworksJson({
       output: '/path/to/output',
       package: '@package/name',
       dir: 'broadcasts',
-    };
+    });
 
-    // Mock console.error to track error messages
-    const originalConsoleError = console.error;
-    const mockConsoleError = jest.fn();
-    console.error = mockConsoleError;
-
-    generateNetworksJson(options);
-
-    // Restore console.error
-    console.error = originalConsoleError;
-
-    const writtenContent = JSON.parse(
-      mockFs.writeFileSync.mock.calls[0][1] as string
+    // Verify that the output file was written with the correct content
+    expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+      '/path/to/output/networks.json',
+      expect.any(String)
     );
 
     // Verify that CustomContract1 was added correctly (found in additionalContracts)
@@ -326,10 +346,8 @@ describe('generateNetworksJson', () => {
     });
 
     // Verify that an error was logged for CustomContract2 (not found in any transaction)
-    expect(mockConsoleError).toHaveBeenCalledWith(
-      'no transaction found',
-      'CustomContract2',
-      '0x4444444444444444444444444444444444444444'
+    expect(logger.error).toHaveBeenCalledWith(
+      'no transaction found CustomContract2 0x4444444444444444444444444444444444444444'
     );
   });
 });

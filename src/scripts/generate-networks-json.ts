@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
+import {logger} from '../utils';
 
 interface Transaction {
   contractName?: string;
@@ -67,7 +68,7 @@ export function generateNetworksJson({
     inputDir = path.join(process.cwd(), packageDir, dir);
   }
   if (!fs.existsSync(inputDir)) {
-    console.error('Cannot find path ' + inputDir);
+    logger.error('Cannot find path ' + inputDir);
     // eslint-disable-next-line n/no-process-exit
     process.exit(1);
   }
@@ -186,7 +187,7 @@ export function generateNetworksJson({
                 startBlock: currentBlockNumber,
               };
             } else {
-              console.error(
+              logger.error(
                 'no implementation found',
                 lowercaseAddress,
                 implementationFor[networkId]
@@ -213,30 +214,31 @@ export function generateNetworksJson({
 
   Object.entries(customDeployments).forEach(([networkId, deployments]) => {
     Object.entries(deployments).forEach(([contractName, address]) => {
-      const result = txs.find(
+      const result = txs.concat().reverse().find(
         ({tx}) =>
           tx.contractName === contractName ||
           tx.additionalContracts?.some(
             c => c.address.toLowerCase() === address.toLowerCase()
           )
       );
-
+      
       if (!result) {
-        console.error('no transaction found', contractName, address);
+        logger.error(`no transaction found ${contractName} ${address}`);
         return;
       }
-      const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
 
+      const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
+      
       if (!receipt) {
-        console.error(
-          'no receipt found',
-          contractName,
-          address,
-          result.tx.hash
+        logger.error(
+          `no receipt found ${contractName} ${address} ${result.tx.hash}`
         );
         return;
       }
 
+      logger.debug(
+        `adding ${contractName} ${address} ${result.tx.hash} at block ${receipt.blockNumber}`
+      );
       network[subgraphData[networkId]][contractName] = {
         address,
         startBlock: +BigInt(receipt.blockNumber).toString(),

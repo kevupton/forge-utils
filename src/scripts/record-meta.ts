@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
 import {FORGE_UTILS_DIR, META_FILENAME, parseValue} from '../utils';
+import {logger} from '../utils';
 
 interface Options {
   key: string;
@@ -30,7 +31,7 @@ export function recordMeta({key, value, output}: Options): void {
       try {
         meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
       } catch (e) {
-        console.warn('Failed to parse existing meta.json, creating new file');
+        logger.warn('Failed to parse existing meta.json, creating new file');
       }
     }
 
@@ -43,10 +44,10 @@ export function recordMeta({key, value, output}: Options): void {
     // Write updated meta to file
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
 
-    console.log(`Metadata recorded to ${metaPath}`);
-    console.log(`Recorded entry: ${key} -> ${JSON.stringify(parsedValue)}`);
+    logger.info(`Metadata recorded to ${metaPath}`);
+    logger.info(`Recorded entry: ${key} -> ${JSON.stringify(parsedValue)}`);
   } catch (error) {
-    console.error('Error recording metadata:', error);
+    logger.error('Error recording metadata:', error);
     throw new Error(`Failed to record metadata: ${error}`);
   }
 }

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import {logger} from '../utils';
 
 let totalBytesRemoved = 0;
 
@@ -28,14 +29,14 @@ export function removeBytecode(
     }
 
     if (!isRecursive) {
-      console.log(
+      logger.info(
         `Total megabytes removed: ${(totalBytesRemoved / (1024 * 1024)).toFixed(
           2
         )} MB`
       );
     }
   } catch (err) {
-    console.error(`Error processing directory: ${directoryPath}`, err);
+    logger.error(`Error processing directory: ${directoryPath}`, err);
   }
 }
 
@@ -55,6 +56,6 @@ function cleanFile(filePath: string): void {
 
     fs.writeFileSync(filePath, updatedContent, 'utf8');
   } catch (err) {
-    console.error(`Error processing file: ${filePath}`, err);
+    logger.error(`Error processing file: ${filePath}`, err);
   }
 }
