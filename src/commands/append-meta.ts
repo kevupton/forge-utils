@@ -23,6 +23,10 @@ export const appendMetaCommand: CommandModule = {
     },
   },
   handler: (argv: any) => {
-    appendMetaToBroadcastFiles(argv.dir, argv.meta, argv.newFiles);
+    appendMetaToBroadcastFiles({
+      dir: argv.dir,
+      meta: argv.meta,
+      newFilesOnly: argv.newFiles,
+    });
   },
 };
