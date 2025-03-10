@@ -33,7 +33,7 @@ describe('recordMeta', () => {
     // Check if file was written
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining('meta.json'),
-      expect.stringContaining('"env": "production"'),
+      expect.stringContaining('"env": "production"')
     );
   });
 
@@ -51,11 +51,11 @@ describe('recordMeta', () => {
     // Check if file was written with nested structure
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"config": {'),
+      expect.stringContaining('"config": {')
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"timeout": 30'),
+      expect.stringContaining('"timeout": 30')
     );
   });
 
@@ -73,11 +73,11 @@ describe('recordMeta', () => {
     // Check if file was written with array
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"networks": ['),
+      expect.stringContaining('"networks": [')
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"mainnet"'),
+      expect.stringContaining('"mainnet"')
     );
   });
 
@@ -92,7 +92,7 @@ describe('recordMeta', () => {
     // Check if file was written with parsed JSON
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"Token": "0x1234"'),
+      expect.stringContaining('"Token": "0x1234"')
     );
   });
 
@@ -107,7 +107,7 @@ describe('recordMeta', () => {
     // Check if file was written with number (not string)
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"gasLimit": 8000000'),
+      expect.stringContaining('"gasLimit": 8000000')
     );
   });
 
@@ -122,7 +122,7 @@ describe('recordMeta', () => {
     // Check if file was written with boolean (not string)
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"enabled": true'),
+      expect.stringContaining('"enabled": true')
     );
   });
 
@@ -140,11 +140,11 @@ describe('recordMeta', () => {
     // Check if file was written with both values
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"env": "staging"'),
+      expect.stringContaining('"env": "staging"')
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      expect.stringContaining('"network": "mainnet"'),
+      expect.stringContaining('"network": "mainnet"')
     );
   });
-}); 
+});

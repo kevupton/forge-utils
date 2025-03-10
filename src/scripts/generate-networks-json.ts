@@ -9,6 +9,9 @@ interface Transaction {
   function?: string;
   arguments?: string[];
   transactionType?: string;
+  additionalContracts?: {
+    address: string;
+  }[];
 }
 
 interface Log {
@@ -29,6 +32,7 @@ interface Data {
   timestamp: number;
   meta?: {
     env?: string;
+    deployments?: Record<string, string>;
   };
 }
 
@@ -64,7 +68,7 @@ export function generateNetworksJson({
   }
   if (!fs.existsSync(inputDir)) {
     console.error('Cannot find path ' + inputDir);
-    // eslint-disable-next-line no-process-exit
+    // eslint-disable-next-line n/no-process-exit
     process.exit(1);
   }
 
@@ -81,6 +85,7 @@ export function generateNetworksJson({
     ? JSON.parse(fs.readFileSync(outputPath, 'utf8'))
     : {};
   const receipts: Receipt[] = [];
+  const customDeployments: Record<string, Record<string, string>> = {};
 
   // Preload all file contents
   const txs = files
@@ -93,6 +98,11 @@ export function generateNetworksJson({
       // Skip files that don't match the specified environment
       if ((data.meta?.env ?? 'default') !== env) {
         return [];
+      }
+
+      if (data.meta?.deployments) {
+        if (!customDeployments[networkId]) customDeployments[networkId] = {};
+        Object.assign(customDeployments[networkId], data.meta.deployments);
       }
 
       if (!network[networkName]) network[networkName] = {};
@@ -164,32 +174,74 @@ export function generateNetworksJson({
           currentBlockNumber,
         ];
 
-        if (tx.contractName === 'TransparentUpgradeableProxy') {
-          const name = implementationFor[networkId][lowercaseAddress];
-          if (name) {
-            network[networkName][name] = {
-              address: lowercaseAddress,
-              startBlock: currentBlockNumber,
-            };
+        if (
+          tx.transactionType === 'CREATE' ||
+          tx.transactionType === 'CREATE2'
+        ) {
+          if (tx.contractName === 'TransparentUpgradeableProxy') {
+            const name = implementationFor[networkId][lowercaseAddress];
+            if (name) {
+              network[networkName][name] = {
+                address: lowercaseAddress,
+                startBlock: currentBlockNumber,
+              };
+            } else {
+              console.error(
+                'no implementation found',
+                lowercaseAddress,
+                implementationFor[networkId]
+              );
+            }
           } else {
-            console.error('no implementation found', lowercaseAddress, implementationFor[networkId]);
-          }
-        } else {
-          if (implementationAddresses[networkId].has(tx.contractName)) {
-            const baseName = tx.contractName.replace('Implementation', '');
-            network[networkName][`${baseName}Implementation`] = {
-              address: lowercaseAddress,
-              startBlock: currentBlockNumber,
-            };
-          } else {
-            network[networkName][tx.contractName] = {
-              address: lowercaseAddress,
-              startBlock: currentBlockNumber,
-            };
+            if (implementationAddresses[networkId].has(tx.contractName)) {
+              const baseName = tx.contractName.replace('Implementation', '');
+              network[networkName][`${baseName}Implementation`] = {
+                address: lowercaseAddress,
+                startBlock: currentBlockNumber,
+              };
+            } else {
+              network[networkName][tx.contractName] = {
+                address: lowercaseAddress,
+                startBlock: currentBlockNumber,
+              };
+            }
           }
         }
       }
     }
+  });
+
+  Object.entries(customDeployments).forEach(([networkId, deployments]) => {
+    Object.entries(deployments).forEach(([contractName, address]) => {
+      const result = txs.find(
+        ({tx}) =>
+          tx.contractName === contractName ||
+          tx.additionalContracts?.some(
+            c => c.address.toLowerCase() === address.toLowerCase()
+          )
+      );
+
+      if (!result) {
+        console.error('no transaction found', contractName, address);
+        return;
+      }
+      const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
+
+      if (!receipt) {
+        console.error(
+          'no receipt found',
+          contractName,
+          address,
+          result.tx.hash
+        );
+        return;
+      }
+
+      network[subgraphData[networkId]][contractName] = {
+        address,
+        startBlock: +BigInt(receipt.blockNumber).toString(),
+      };
+    });
   });
 
   fs.writeFileSync(outputPath, JSON.stringify(network, null, 2));

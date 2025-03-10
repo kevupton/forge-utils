@@ -25,4 +25,4 @@ export const DEPLOYMENTS_PATH = `${FORGE_UTILS_DIR}/${DEPLOYMENTS_FILENAME}`;
 /**
  * Path to the meta file relative to the FORGE_UTILS_DIR
  */
-export const META_PATH = `${FORGE_UTILS_DIR}/${META_FILENAME}`; 
+export const META_PATH = `${FORGE_UTILS_DIR}/${META_FILENAME}`;

@@ -25,4 +25,4 @@ export const recordMetaCommand: CommandModule = {
   handler: (argv: any) => {
     recordMeta(argv);
   },
-}; 
+};

@@ -30,9 +30,7 @@ export function recordMeta({key, value, output}: Options): void {
       try {
         meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
       } catch (e) {
-        console.warn(
-          'Failed to parse existing meta.json, creating new file'
-        );
+        console.warn('Failed to parse existing meta.json, creating new file');
       }
     }
 
@@ -51,4 +49,4 @@ export function recordMeta({key, value, output}: Options): void {
     console.error('Error recording metadata:', error);
     throw new Error(`Failed to record metadata: ${error}`);
   }
-} 
+}

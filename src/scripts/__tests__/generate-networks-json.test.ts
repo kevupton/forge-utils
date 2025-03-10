@@ -31,6 +31,7 @@ describe('generateNetworksJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'TestContract',
               contractAddress: '0x1234567890123456789012345678901234567890',
               hash: '0xabcdef',
@@ -49,6 +50,7 @@ describe('generateNetworksJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'AnotherContract',
               contractAddress: '0x0987654321098765432109876543210987654321',
               hash: '0xfedcba',
@@ -142,13 +144,20 @@ describe('generateNetworksJson', () => {
         ],
         receipts: [
           {transactionHash: '0xaaaa', blockNumber: '100'},
-          {transactionHash: '0xbbbb', blockNumber: '101', logs: [
-            {
-              topics: ['0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b', '0x0000000000000000000000001111111111111111111111111111111111111111'],
-              address: '0x2222222222222222222222222222222222222222',
-              data: '0x',
-            }
-          ]},
+          {
+            transactionHash: '0xbbbb',
+            blockNumber: '101',
+            logs: [
+              {
+                topics: [
+                  '0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b',
+                  '0x0000000000000000000000001111111111111111111111111111111111111111',
+                ],
+                address: '0x2222222222222222222222222222222222222222',
+                data: '0x',
+              },
+            ],
+          },
           {transactionHash: '0xcccc', blockNumber: '102'},
         ],
         timestamp: 1625270400,
@@ -244,5 +253,83 @@ describe('generateNetworksJson', () => {
         },
       },
     });
+  });
+
+  it('should handle custom deployments from meta.deployments correctly', () => {
+    mockGlob.sync.mockReturnValue([
+      '/path/to/package/broadcasts/1/run-latest.json',
+    ]);
+
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);
+    mockFs.readFileSync.mockImplementation(path => {
+      if (path === '/path/to/output/networks.json') {
+        return JSON.stringify({});
+      }
+      return JSON.stringify({
+        transactions: [
+          {
+            contractName: 'MainContract',
+            contractAddress: '0x1111111111111111111111111111111111111111',
+            hash: '0xaaaa',
+            additionalContracts: [
+              {
+                address: '0x3333333333333333333333333333333333333333',
+              },
+            ],
+          },
+          {
+            contractName: 'AnotherContract',
+            contractAddress: '0x2222222222222222222222222222222222222222',
+            hash: '0xbbbb',
+          },
+        ],
+        receipts: [
+          {transactionHash: '0xaaaa', blockNumber: '100'},
+          {transactionHash: '0xbbbb', blockNumber: '200'},
+        ],
+        timestamp: 1625097600,
+        meta: {
+          env: 'default',
+          deployments: {
+            CustomContract1: '0x3333333333333333333333333333333333333333',
+            CustomContract2: '0x4444444444444444444444444444444444444444',
+          },
+        },
+      });
+    });
+
+    const options = {
+      output: '/path/to/output',
+      package: '@package/name',
+      dir: 'broadcasts',
+    };
+
+    // Mock console.error to track error messages
+    const originalConsoleError = console.error;
+    const mockConsoleError = jest.fn();
+    console.error = mockConsoleError;
+
+    generateNetworksJson(options);
+
+    // Restore console.error
+    console.error = originalConsoleError;
+
+    const writtenContent = JSON.parse(
+      mockFs.writeFileSync.mock.calls[0][1] as string
+    );
+
+    // Verify that CustomContract1 was added correctly (found in additionalContracts)
+    expect(writtenContent.mainnet.CustomContract1).toEqual({
+      address: '0x3333333333333333333333333333333333333333',
+      startBlock: 100,
+    });
+
+    // Verify that an error was logged for CustomContract2 (not found in any transaction)
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      'no transaction found',
+      'CustomContract2',
+      '0x4444444444444444444444444444444444444444'
+    );
   });
 });
