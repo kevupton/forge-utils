@@ -4,10 +4,10 @@ import {removeBytecode} from '../remove-bytecode';
 
 jest.mock('fs');
 jest.mock('path');
-jest.mock('../../utils/logger');
+jest.mock('../../lib/logger');
 
 // Import the mocked logger
-import {logger} from '../../utils/logger';
+import {logger} from '../../lib/logger';
 
 describe('removeBytecode', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;

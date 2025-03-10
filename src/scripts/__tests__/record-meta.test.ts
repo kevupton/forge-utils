@@ -11,8 +11,8 @@ jest.mock('fs', () => ({
 }));
 
 // Mock logger
-jest.mock('../../utils/logger');
-import {logger} from '../../utils/logger';
+jest.mock('../../lib/logger');
+import {logger} from '../../lib/logger';
 
 describe('recordMeta', () => {
   beforeEach(() => {

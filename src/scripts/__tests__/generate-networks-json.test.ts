@@ -5,10 +5,10 @@ import {generateNetworksJson} from '../generate-networks-json';
 jest.mock('fs');
 jest.mock('glob');
 jest.mock('path');
-jest.mock('../../utils/logger');
+jest.mock('../../lib/logger');
 
 // Import the mocked logger
-import {logger} from '../../utils/logger';
+import {logger} from '../../lib/logger';
 
 describe('generateNetworksJson', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;
