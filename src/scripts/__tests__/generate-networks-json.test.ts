@@ -63,6 +63,8 @@ describe('generateNetworksJson', () => {
           timestamp: 1625184000,
           meta: {env: 'default'},
         });
+      } else if (path === '/path/to/output/networks.json') {
+        return JSON.stringify({});
       }
       throw new Error(`Unexpected file path: ${path}`);
     });
@@ -109,15 +111,20 @@ describe('generateNetworksJson', () => {
 
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({isDirectory: () => true} as fs.Stats);
-    mockFs.readFileSync.mockImplementation(() => {
+    mockFs.readFileSync.mockImplementation(path => {
+      if (path === '/path/to/output/networks.json') {
+        return JSON.stringify({});
+      }
       return JSON.stringify({
         transactions: [
           {
+            transactionType: 'CREATE',
             contractName: 'TestImplementation',
             contractAddress: '0x1111111111111111111111111111111111111111',
             hash: '0xaaaa',
           },
           {
+            transactionType: 'CREATE2',
             contractName: 'TransparentUpgradeableProxy',
             contractAddress: '0x2222222222222222222222222222222222222222',
             hash: '0xbbbb',
@@ -135,7 +142,13 @@ describe('generateNetworksJson', () => {
         ],
         receipts: [
           {transactionHash: '0xaaaa', blockNumber: '100'},
-          {transactionHash: '0xbbbb', blockNumber: '101'},
+          {transactionHash: '0xbbbb', blockNumber: '101', logs: [
+            {
+              topics: ['0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b', '0x0000000000000000000000001111111111111111111111111111111111111111'],
+              address: '0x2222222222222222222222222222222222222222',
+              data: '0x',
+            }
+          ]},
           {transactionHash: '0xcccc', blockNumber: '102'},
         ],
         timestamp: 1625270400,
@@ -162,7 +175,7 @@ describe('generateNetworksJson', () => {
         },
         TestImplementation: {
           address: '0x1111111111111111111111111111111111111111',
-          startBlock: 101,
+          startBlock: 100,
         },
       },
     });
@@ -181,6 +194,7 @@ describe('generateNetworksJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'ProductionContract',
               contractAddress: '0x1111111111111111111111111111111111111111',
               hash: '0xaaaa',
@@ -194,6 +208,7 @@ describe('generateNetworksJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'StagingContract',
               contractAddress: '0x2222222222222222222222222222222222222222',
               hash: '0xbbbb',
@@ -203,6 +218,8 @@ describe('generateNetworksJson', () => {
           timestamp: 1625184000,
           meta: {env: 'staging'},
         });
+      } else if (path === '/path/to/output/networks.json') {
+        return JSON.stringify({});
       }
       throw new Error(`Unexpected file path: ${path}`);
     });

@@ -10,13 +10,15 @@
     "forge-utils": "bin/forge-utils.js"
   },
   "dependencies": {
-    "ethers": "^6.13.4",
+    "ethers": "^6.13.5",
     "glob": "^10.3.10",
+    "lodash": "^4.17.21",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.13",
+    "@types/lodash": "^4.17.16",
     "@types/node": "20.8.2",
     "@types/yargs": "^17.0.29",
     "gts": "^5.2.0",

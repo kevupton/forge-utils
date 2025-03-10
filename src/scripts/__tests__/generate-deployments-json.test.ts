@@ -27,6 +27,7 @@ describe('generateDeploymentsJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'TestContract',
               contractAddress: '0x1234567890123456789012345678901234567890',
               hash: '0xabcdef',
@@ -45,6 +46,7 @@ describe('generateDeploymentsJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'AnotherContract',
               contractAddress: '0x0987654321098765432109876543210987654321',
               hash: '0xfedcba',
@@ -105,11 +107,13 @@ describe('generateDeploymentsJson', () => {
         return JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'TestImplementation',
               contractAddress: '0x1111111111111111111111111111111111111111',
               hash: '0xaaaa',
             },
             {
+              transactionType: 'CREATE2',
               contractName: 'TransparentUpgradeableProxy',
               contractAddress: '0x2222222222222222222222222222222222222222',
               hash: '0xbbbb',
@@ -184,6 +188,7 @@ describe('generateDeploymentsJson', () => {
         JSON.stringify({
           transactions: [
             {
+              transactionType: 'CREATE',
               contractName: 'NewContract',
               contractAddress: '0xffffffffffffffffffffffffffffffffffffffff',
               hash: '0xdddd',

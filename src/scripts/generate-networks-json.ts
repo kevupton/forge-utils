@@ -172,7 +172,7 @@ export function generateNetworksJson({
               startBlock: currentBlockNumber,
             };
           } else {
-            console.error('no implementation found', lowercaseAddress);
+            console.error('no implementation found', lowercaseAddress, implementationFor[networkId]);
           }
         } else {
           if (implementationAddresses[networkId].has(tx.contractName)) {

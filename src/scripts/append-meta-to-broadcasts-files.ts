@@ -2,21 +2,89 @@ import fs from 'fs';
 import path from 'path';
 import {execSync} from 'child_process';
 import {sync} from 'glob';
+import _ from 'lodash';
+import {FORGE_UTILS_DIR, META_FILENAME} from '../utils/constants';
+import { parseValue } from '../utils';
+
+interface MetaArgs {
+  [key: string]: any;
+}
+
+interface AppendMetaOptions {
+  dir: string;
+  meta: MetaArgs;
+  newFilesOnly?: boolean;
+  cwd?: string;
+}
 
 export const appendMetaToBroadcastFiles = (
-  dir: string,
-  meta: any,
-  newFilesOnly = false
+  options: AppendMetaOptions
 ) => {
+  const {dir, meta, newFilesOnly = false, cwd = process.cwd()} = options;
+
   const files = sync(path.join(dir, '**/*.json')).filter(
     file => !file.endsWith('run-latest.json')
   );
   const filesToProcess = newFilesOnly ? getNewFiles(files) : files;
-  processFiles(filesToProcess, meta);
+  
+  // Load meta from .forge-utils/meta.json if it exists
+  const metaFromFile = loadMetaFromFile(cwd);
+  
+  // Combine meta from command line and meta file
+  const combinedMeta = processMeta(meta, metaFromFile);
+  
+  processFiles(filesToProcess, combinedMeta);
+
+  // Remove meta file after successfully processing
+  removeMetaFile(cwd);
 };
 
-interface MetaArgs {
-  [key: string]: string;
+/**
+ * Loads meta from .forge-utils/meta.json if it exists
+ */
+function loadMetaFromFile(cwd: string): Record<string, any> {
+  const metaPath = path.join(cwd, FORGE_UTILS_DIR, META_FILENAME);
+
+  if (fs.existsSync(metaPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    } catch (e) {
+      console.warn(`Failed to parse ${metaPath}, ignoring file`);
+    }
+  }
+  return {};
+}
+
+/**
+ * Process meta arguments from command line and combine with meta from file
+ */
+function processMeta(metaArgs: MetaArgs, metaFromFile: Record<string, any>): MetaArgs {
+  const result: MetaArgs = {
+    ...metaFromFile,
+  };
+  
+  // Process meta arguments from command line (format: key=value)
+  for (const [key, value] of Object.entries(metaArgs)) {
+    _.set(result, key, parseValue(value));
+  }
+  
+  return result;
+}
+
+/**
+ * Removes the meta file after successful processing
+ */
+function removeMetaFile(cwd: string): void {
+  const metaPath = path.join(cwd, FORGE_UTILS_DIR, META_FILENAME);
+  
+  if (fs.existsSync(metaPath)) {
+    try {
+      fs.unlinkSync(metaPath);
+      console.log(`Successfully removed ${metaPath}`);
+    } catch (e) {
+      console.warn(`Failed to remove ${metaPath}: ${e}`);
+    }
+  }
 }
 
 function appendMetaToFile(filePath: string, meta: MetaArgs) {

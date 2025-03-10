@@ -126,11 +126,11 @@ const _bytecode = "0x";
 
 ### Append Meta to Broadcast Files
 
-Appends meta information to Forge broadcast JSON files.
+Appends meta information to Forge broadcast JSON files. The command will automatically use any metadata stored in `.forge-utils/meta.json` in addition to any metadata specified on the command line.
 
 Usage:
 ```
-forge-utils append-meta-to-broadcast --dir <broadcast_dir> --meta <meta_info> [--new-files]
+forge-utils append-meta --dir <broadcast_dir> --meta <meta_info> [--new-files]
 ```
 
 - `--dir`: Directory containing broadcast files (default: './broadcast')
@@ -139,7 +139,7 @@ forge-utils append-meta-to-broadcast --dir <broadcast_dir> --meta <meta_info> [-
 
 Example:
 ```
-forge-utils append-meta-to-broadcast --dir ./broadcast --meta meta.env=staging --new-files
+forge-utils append-meta --dir ./broadcast --meta meta.env=staging --new-files
 ```
 
 This command modifies the broadcast JSON files in the specified directory. It doesn't create new files, but updates existing ones. For example, a broadcast file might be updated to include:
@@ -150,6 +150,133 @@ This command modifies the broadcast JSON files in the specified directory. It do
   "meta": {
     "env": "staging"
   }
+}
+```
+
+### record-meta
+
+Records metadata that can be used by the append-meta command. The data is stored in `.forge-utils/meta.json`. Supports dot notation for nested objects and arrays.
+
+```bash
+forge-utils record-meta <key> <value> --output <output-dir>
+```
+
+Where:
+- `<key>`: The key to identify the metadata (e.g., "env", "network", "config.timeout")
+- `<value>`: The value to record (strings, numbers, booleans, or JSON objects/arrays)
+- `--output`: Directory to store the meta.json file (default: ".forge-utils")
+
+The command supports dot notation for keys, allowing you to create nested objects and arrays:
+
+```bash
+# Create a nested object
+forge-utils record-meta "config.timeout" 30
+forge-utils record-meta "config.retries" 3
+
+# Create an array
+forge-utils record-meta "networks[0]" "mainnet"
+forge-utils record-meta "networks[1]" "goerli"
+
+# Store complex values (as JSON)
+forge-utils record-meta "contracts" '{"Token":"0x1234...","Vault":"0xabcd..."}'
+```
+
+#### Example usage in a Forge script
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import "forge-std/Script.sol";
+
+contract RecordMeta is Script {
+    function run() public {
+        // Record environment metadata
+        string[] memory envInputs = new string[](4);
+        envInputs[0] = "forge-utils";
+        envInputs[1] = "record-meta";
+        envInputs[2] = "env";
+        envInputs[3] = "production";
+        vm.ffi(envInputs);
+        
+        // Record nested configuration
+        string[] memory configInputs = new string[](4);
+        configInputs[0] = "forge-utils";
+        configInputs[1] = "record-meta";
+        configInputs[2] = "config.gasLimit";
+        configInputs[3] = "8000000";
+        vm.ffi(configInputs);
+        
+        // Record array of networks
+        string[] memory networkInputs = new string[](4);
+        networkInputs[0] = "forge-utils";
+        networkInputs[1] = "record-meta";
+        networkInputs[2] = "networks[0]";
+        networkInputs[3] = "mainnet";
+        vm.ffi(networkInputs);
+        
+        // Later, you can use the append-meta command to apply this metadata to broadcast files
+        // forge-utils append-meta --dir ./broadcast
+    }
+}
+```
+
+## Commands
+
+### deployments
+
+Generates a deployments.json based on the forge deployment scripts. The command will read from any existing deployments in the `.forge-utils` directory and merge them with the new deployments.
+
+```bash
+forge-utils deployments --dir <broadcast-dir> --output <output-dir>
+```
+
+- `--dir`: Directory of forge broadcast files (default: './broadcast')
+- `--output`: Where to output the deployments.json file (default: '.forge-utils')
+
+### record-deployment
+
+Records deployment data with the given key and address. This command is useful when you want to record deployment addresses directly from a Solidity Forge script. The data is stored in `.forge-utils/deployments.json`.
+
+```bash
+forge-utils record-deployment <key> <address> --output <output-dir>
+```
+
+Where:
+- `<key>`: The key to identify the deployment (e.g., "Token", "Vault")
+- `<address>`: The contract address to record
+- `--output`: Directory to store the deployments.json file (default: ".forge-utils")
+
+#### Example usage in a Forge script
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import "forge-std/Script.sol";
+
+contract RecordDeployment is Script {
+    function run() public {
+        // Deploy contracts
+        address tokenAddress = 0x1234567890123456789012345678901234567890;
+        address vaultAddress = 0xabcdefabcdefabcdefabcdefabcdefabcdefabcd;
+
+        // Record token deployment
+        string[] memory tokenInputs = new string[](4);
+        tokenInputs[0] = "forge-utils";
+        tokenInputs[1] = "record-deployment";
+        tokenInputs[2] = "Token";
+        tokenInputs[3] = vm.toString(tokenAddress);
+        vm.ffi(tokenInputs);
+        
+        // Record vault deployment
+        string[] memory vaultInputs = new string[](4);
+        vaultInputs[0] = "forge-utils";
+        vaultInputs[1] = "record-deployment";
+        vaultInputs[2] = "Vault";
+        vaultInputs[3] = vm.toString(vaultAddress);
+        vm.ffi(vaultInputs);
+    }
 }
 ```
 

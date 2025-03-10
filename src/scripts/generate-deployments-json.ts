@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
 import {getAddress} from 'ethers';
+import {FORGE_UTILS_DIR, DEPLOYMENTS_FILENAME} from '../utils/constants';
 
 interface Transaction {
   contractName?: string;
@@ -30,6 +31,7 @@ interface Data {
   timestamp: number;
   meta?: {
     env?: string;
+    deployments?: Record<string, any>;
   };
 }
 
@@ -55,9 +57,10 @@ export function generateDeploymentsJson({output, dir}: Options) {
     file => file.endsWith('.json') && !file.endsWith('run-latest.json')
   );
 
+  // Determine the output path for deployments.json
   const deploymentsPath =
     fs.existsSync(output) && fs.statSync(output).isDirectory()
-      ? path.join(output, 'deployments.json')
+      ? path.join(output, DEPLOYMENTS_FILENAME)
       : output;
 
   const loadConfig = (): DeploymentConfig => {
@@ -88,8 +91,10 @@ export function generateDeploymentsJson({output, dir}: Options) {
       if (env) {
         if (!config[env]) config[env] = {};
         if (!config[env][chainId]) config[env][chainId] = {};
+        Object.assign(config[env][chainId], data.meta?.deployments ?? {});
       } else {
         if (!config[chainId]) config[chainId] = {};
+        Object.assign(config[chainId], data.meta?.deployments ?? {});
       }
       if (!contractTimestamps[chainId]) contractTimestamps[chainId] = {};
       if (!implementationFor[chainId]) implementationFor[chainId] = {};
@@ -150,11 +155,13 @@ export function generateDeploymentsJson({output, dir}: Options) {
         ? (config[env][chainId] as Record<string, string>)
         : (config[chainId] as Record<string, string>);
 
-      if (tx.contractName === 'TransparentUpgradeableProxy') {
-        const baseName = implementationFor[chainId][contractAddress];
-        root[baseName] = getAddress(contractAddress);
-      } else if (!implementationAddresses[chainId].has(tx.contractName)) {
-        root[tx.contractName] = getAddress(contractAddress);
+      if (tx.transactionType === 'CREATE' || tx.transactionType === 'CREATE2') {
+        if (tx.contractName === 'TransparentUpgradeableProxy') {
+          const baseName = implementationFor[chainId][contractAddress];
+          root[baseName] = getAddress(contractAddress);
+        } else if (!implementationAddresses[chainId].has(tx.contractName)) {
+          root[tx.contractName] = getAddress(contractAddress);
+        }
       }
     }
   });

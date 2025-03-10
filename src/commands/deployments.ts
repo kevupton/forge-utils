@@ -13,7 +13,7 @@ export const deploymentsCommand: CommandModule = {
       default: path.join(process.cwd(), 'broadcast'),
     },
     output: {
-      describe: 'Where to output the networks.json to',
+      describe: 'Where to output the deployments.json to',
       type: 'string',
       default: process.cwd(),
     },

@@ -76,7 +76,7 @@ describe('removeBytecode', () => {
     );
     expect(mockPath.join).toHaveBeenCalledWith('/mock/path', 'subdir');
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Successfully cleaned file:')
+      expect.stringContaining('Total megabytes removed:')
     );
 
     consoleLogSpy.mockRestore();
