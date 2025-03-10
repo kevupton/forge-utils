@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {logger} from '../utils';
+import {logger} from '../lib';
 
 let totalBytesRemoved = 0;
 

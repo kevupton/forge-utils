@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
-import {FORGE_UTILS_DIR, META_FILENAME, parseValue} from '../utils';
-import {logger} from '../utils';
+import {FORGE_UTILS_DIR, META_FILENAME, logger, parseValue} from '../lib';
 
 interface Options {
   key: string;

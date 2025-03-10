@@ -1,4 +1,2 @@
 export * from './get-deployment-address';
-export * from './constants';
-export * from './parse-value';
-export * from './logger';
+// IMPORTANT: Do not add any utils here. Use the lib folder instead. This needs client side support.

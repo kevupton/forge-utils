@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
 import {getAddress} from 'ethers';
-import {FORGE_UTILS_DIR, DEPLOYMENTS_FILENAME} from '../utils/constants';
+import {DEPLOYMENTS_FILENAME} from '../lib';
 
 interface Transaction {
   contractName?: string;

@@ -311,10 +311,13 @@ describe('generateNetworksJson', () => {
             },
           ],
           timestamp: 1625097600,
-          meta: {env: 'default', deployments: {
-            CustomContract1: '0x3333333333333333333333333333333333333333',
-            CustomContract2: '0x4444444444444444444444444444444444444444',
-          }},
+          meta: {
+            env: 'default',
+            deployments: {
+              CustomContract1: '0x3333333333333333333333333333333333333333',
+              CustomContract2: '0x4444444444444444444444444444444444444444',
+            },
+          },
         });
       }
       return '{}';

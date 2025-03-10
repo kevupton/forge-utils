@@ -1,6 +1,6 @@
 import {CommandModule} from 'yargs';
 import {recordMeta} from '../scripts/record-meta';
-import {FORGE_UTILS_DIR} from '../utils/constants';
+import {FORGE_UTILS_DIR} from '../lib/constants';
 
 export const recordMetaCommand: CommandModule = {
   command: 'record-meta <key> <value>',

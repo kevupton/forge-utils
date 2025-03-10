@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {sync} from 'glob';
-import {logger} from '../utils';
+import {logger} from '../lib';
 
 interface Transaction {
   contractName?: string;
@@ -214,21 +214,24 @@ export function generateNetworksJson({
 
   Object.entries(customDeployments).forEach(([networkId, deployments]) => {
     Object.entries(deployments).forEach(([contractName, address]) => {
-      const result = txs.concat().reverse().find(
-        ({tx}) =>
-          tx.contractName === contractName ||
-          tx.additionalContracts?.some(
-            c => c.address.toLowerCase() === address.toLowerCase()
-          )
-      );
-      
+      const result = txs
+        .concat()
+        .reverse()
+        .find(
+          ({tx}) =>
+            tx.contractName === contractName ||
+            tx.additionalContracts?.some(
+              c => c.address.toLowerCase() === address.toLowerCase()
+            )
+        );
+
       if (!result) {
         logger.error(`no transaction found ${contractName} ${address}`);
         return;
       }
 
       const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
-      
+
       if (!receipt) {
         logger.error(
           `no receipt found ${contractName} ${address} ${result.tx.hash}`

@@ -3,8 +3,7 @@ import path from 'path';
 import {execSync} from 'child_process';
 import {sync} from 'glob';
 import _ from 'lodash';
-import {FORGE_UTILS_DIR, META_FILENAME} from '../utils/constants';
-import {parseValue, logger} from '../utils';
+import {FORGE_UTILS_DIR, META_FILENAME, parseValue, logger} from '../lib';
 
 interface MetaArgs {
   [key: string]: any;
