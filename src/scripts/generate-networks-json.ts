@@ -62,77 +62,98 @@ export function generateNetworksJson({
   dir,
   env = 'default',
 }: Options) {
+  logger.debug(`Starting generateNetworksJson with output: ${output}, package: ${packageDir}, dir: ${dir}, env: ${env}`);
+  
   // Modify this path
   let inputDir = path.join(process.cwd(), 'node_modules', packageDir, dir);
   if (!fs.existsSync(inputDir)) {
+    logger.debug(`Path not found: ${inputDir}, trying alternative path`);
     inputDir = path.join(process.cwd(), packageDir, dir);
   }
   if (!fs.existsSync(inputDir)) {
-    logger.error('Cannot find path ' + inputDir);
+    logger.error(`Cannot find path ${inputDir}`);
     // eslint-disable-next-line n/no-process-exit
     process.exit(1);
   }
+  logger.debug(`Using input directory: ${inputDir}`);
 
   inputDir = path.join(inputDir, '**/*.json');
+  logger.debug(`Looking for files in: ${inputDir}`);
 
   const outputPath =
     fs.existsSync(output) && fs.statSync(output).isDirectory()
       ? path.join(output, 'networks.json')
       : output;
+  logger.debug(`Networks will be written to: ${outputPath}`);
 
   const files = sync(inputDir).filter(file => file.endsWith('.json'));
+  logger.debug(`Found ${files.length} JSON files to process`);
 
   const network: NetworkConfig = fs.existsSync(outputPath)
     ? JSON.parse(fs.readFileSync(outputPath, 'utf8'))
     : {};
+  logger.debug(`Loaded existing network config with ${Object.keys(network).length} networks`);
+  
   const receipts: Receipt[] = [];
   const customDeployments: Record<string, Record<string, string>> = {};
 
   // Preload all file contents
+  logger.debug(`Starting to process transaction files`);
   const txs = files
+    .sort()
     .flatMap(file => {
+      logger.debug(`Processing file: ${file}`);
       const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Data;
       const pieces = file.split('/');
       const networkId = pieces[pieces.length - 2];
       const networkName = subgraphData[networkId];
+      logger.debug(`File ${file} has networkId: ${networkId}, networkName: ${networkName || 'unknown'}`);
 
       // Skip files that don't match the specified environment
       if ((data.meta?.env ?? 'default') !== env) {
-        logger.debug(`skipping ${file} ${data.meta?.env ?? 'default'} !== ${env}`);
+        logger.debug(`Skipping ${file}: environment mismatch - ${data.meta?.env ?? 'default'} !== ${env}`);
         return [];
       }
 
       if (data.meta?.deployments) {
         if (!customDeployments[networkId]) customDeployments[networkId] = {};
         Object.assign(customDeployments[networkId], data.meta.deployments);
+        logger.debug(`Added ${Object.keys(data.meta.deployments).length} custom deployments from ${file}`);
       }
 
-      if (!network[networkName]) network[networkName] = {};
+      if (!network[networkName]) {
+        network[networkName] = {};
+        logger.debug(`Initialized new network entry for ${networkName}`);
+      }
       if (!contractTimestamps[networkId]) contractTimestamps[networkId] = {};
       if (!contractNames[networkId]) contractNames[networkId] = {};
-      if (!implementationAddresses[networkId])
-        implementationAddresses[networkId] = new Set();
+      if (!implementationAddresses[networkId]) implementationAddresses[networkId] = new Set();
       if (!implementationFor[networkId]) implementationFor[networkId] = {};
 
       receipts.push(...data.receipts);
+      logger.debug(`Added ${data.receipts.length} receipts from ${file}`);
 
       return data.transactions.map(tx => ({tx, networkId, networkName, data}));
     })
     .sort((a, b) => a.data.timestamp - b.data.timestamp);
 
+  logger.debug(`Processed ${txs.length} transactions from all files`);
+
   // First pass: save all contract names and implementation addresses
+  logger.debug(`Starting first pass: collecting contract names and implementation addresses`);
   txs.forEach(({tx, networkId}) => {
     if (tx.contractName && tx.contractAddress) {
       const lowercaseAddress = tx.contractAddress.toLowerCase();
       contractNames[networkId][lowercaseAddress] = tx.contractName;
       if (tx.contractName.endsWith('Implementation')) {
         implementationAddresses[networkId].add(lowercaseAddress);
-        logger.debug(`registered implementation ${tx.contractName} ${lowercaseAddress}`);
+        logger.debug(`Registered implementation: ${tx.contractName} at ${lowercaseAddress} on network ${networkId}`);
       }
     }
   });
 
   // Second pass: process upgrades and deployments
+  logger.debug(`Starting second pass: processing upgrades`);
   txs.forEach(({tx, networkId}) => {
     const receipt = receipts.find(r => r.transactionHash === tx.hash);
     if (receipt && receipt.logs) {
@@ -147,19 +168,22 @@ export function generateNetworksJson({
           ).toLowerCase();
           const implementationName =
             contractNames[networkId][implementationAddress];
-          implementationAddresses[networkId].add(implementationName);
-
+          
           if (implementationName) {
+            implementationAddresses[networkId].add(implementationName);
             const baseName = implementationName.replace('Implementation', '');
             const proxyAddress = log.address.toLowerCase();
             implementationFor[networkId][proxyAddress] = baseName;
-            logger.debug(`registered implementation ${implementationName} ${implementationAddress} as ${baseName} for proxy ${proxyAddress}`);
+            logger.debug(`Processed upgrade: ${baseName} implementation at ${implementationAddress}, proxy at ${proxyAddress} on network ${networkId}`);
+          } else {
+            logger.debug(`Found upgrade event but no implementation name for address ${implementationAddress} on network ${networkId}`);
           }
         }
       });
     }
   });
 
+  logger.debug(`Starting third pass: processing deployments`);
   txs.forEach(({tx, networkId, networkName, data}) => {
     const receipt = receipts.find(r => r.transactionHash === tx.hash);
     if (tx.contractName && tx.contractAddress) {
@@ -189,11 +213,10 @@ export function generateNetworksJson({
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
-              logger.debug(`added proxy ${tx.contractName} ${lowercaseAddress} at block ${currentBlockNumber}`);
+              logger.debug(`Added proxy contract: ${name} at ${lowercaseAddress} on network ${networkName} at block ${currentBlockNumber}`);
             } else {
               logger.error(
-                'no implementation found',
-                lowercaseAddress,
+                `No implementation found for proxy at ${lowercaseAddress} on network ${networkId}`,
                 implementationFor[networkId]
               );
             }
@@ -204,13 +227,13 @@ export function generateNetworksJson({
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
-              logger.debug(`added implementation ${tx.contractName} ${lowercaseAddress} as ${baseName} at block ${currentBlockNumber}`);
+              logger.debug(`Added implementation: ${tx.contractName} at ${lowercaseAddress} as ${baseName}Implementation on network ${networkName} at block ${currentBlockNumber}`);
             } else {
               network[networkName][tx.contractName] = {
                 address: lowercaseAddress,
                 startBlock: currentBlockNumber,
               };
-              logger.debug(`added ${tx.contractName} ${lowercaseAddress} at block ${currentBlockNumber}`);
+              logger.debug(`Added contract: ${tx.contractName} at ${lowercaseAddress} on network ${networkName} at block ${currentBlockNumber}`);
             }
           }
         }
@@ -218,9 +241,14 @@ export function generateNetworksJson({
     }
   });
 
-  logger.debug('customDeployments ' + JSON.stringify(customDeployments));
+  logger.debug(`Processing custom deployments: ${JSON.stringify(customDeployments, null, 2)}`);
   Object.entries(customDeployments).forEach(([networkId, deployments]) => {
+    const networkName = subgraphData[networkId];
+    logger.debug(`Processing custom deployments for network ${networkName} (${networkId})`);
+    
     Object.entries(deployments).forEach(([contractName, address]) => {
+      logger.debug(`Looking for transaction for custom deployment: ${contractName} at ${address}`);
+      
       const result = txs
         .concat()
         .reverse()
@@ -232,34 +260,37 @@ export function generateNetworksJson({
             )
         );
 
-        
       if (!result) {
-        logger.error(`no transaction found ${contractName} ${address}`);
+        logger.error(`No transaction found for custom deployment: ${contractName} at ${address} on network ${networkId}`);
         return;
       }
 
-      logger.debug('result tx ' + JSON.stringify(result?.tx));
+      logger.debug(`Found transaction for custom deployment: ${JSON.stringify(result?.tx)}`);
 
       const receipt = receipts.find(r => r.transactionHash === result.tx.hash);
 
       if (!receipt) {
         logger.error(
-          `no receipt found ${contractName} ${address} ${result.tx.hash}`
+          `No receipt found for custom deployment: ${contractName} at ${address}, tx hash: ${result.tx.hash}`
         );
         return;
       }
 
+      const blockNumber = +BigInt(receipt.blockNumber).toString();
       logger.debug(
-        `added custom deployment ${contractName} ${address} ${result.tx.hash} at block ${receipt.blockNumber}`
+        `Adding custom deployment: ${contractName} at ${address} on network ${networkName} at block ${blockNumber}`
       );
+      
       network[subgraphData[networkId]][contractName] = {
         address,
-        startBlock: +BigInt(receipt.blockNumber).toString(),
+        startBlock: blockNumber,
       };
     });
   });
 
+  logger.debug(`Writing networks.json to ${outputPath}`);
   fs.writeFileSync(outputPath, JSON.stringify(network, null, 2));
+  logger.info(`Successfully wrote networks.json with ${Object.keys(network).length} networks`);
 }
 
 const subgraphData: Record<string, string> = {
